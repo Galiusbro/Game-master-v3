@@ -1,0 +1,23 @@
+[flake8]
+max-line-length = 88
+extend-ignore = 
+    E203,  # whitespace before ':'
+    E501,  # line too long (handled by black)
+    W503,  # line break before binary operator
+    F401,  # module imported but unused (sometimes needed for exports)
+exclude = 
+    .git,
+    __pycache__,
+    venv,
+    .venv,
+    htmlcov,
+    .pytest_cache,
+    migrations,
+    build,
+    dist,
+    *.egg-info
+per-file-ignores = 
+    __init__.py:F401
+    tests/*:D,S101,F811
+max-complexity = 10
+docstring-convention = google

@@ -1,0 +1,105 @@
+version: '3.8'
+
+services:
+  # Graph Database для связей между сущностями
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: gm_neo4j
+    environment:
+      NEO4J_AUTH: neo4j/gamemaster123
+      NEO4J_PLUGINS: '["apoc"]'
+      NEO4J_dbms_security_procedures_unrestricted: apoc.*
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    networks:
+      - gamemaster
+
+  # Vector Database для semantic search
+  qdrant:
+    image: qdrant/qdrant:v1.7.3
+    container_name: gm_qdrant
+    ports:
+      - "6333:6333"  # HTTP API
+      - "6334:6334"  # gRPC API
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__HTTP_PORT: 6333
+      QDRANT__SERVICE__GRPC_PORT: 6334
+    networks:
+      - gamemaster
+
+  # Cache и session storage
+  redis:
+    image: redis:7.2-alpine
+    container_name: gm_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - gamemaster
+
+  # Операционные данные (пользователи, логи, метрики)
+  postgres:
+    image: postgres:16-alpine
+    container_name: gm_postgres
+    environment:
+      POSTGRES_DB: gamemaster
+      POSTGRES_USER: gm_user
+      POSTGRES_PASSWORD: gm_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - gamemaster
+
+  # Мониторинг (опционально для dev)
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: gm_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    networks:
+      - gamemaster
+
+  # Grafana для визуализации метрик
+  grafana:
+    image: grafana/grafana:10.2.0
+    container_name: gm_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - gamemaster
+
+volumes:
+  neo4j_data:
+  neo4j_logs:
+  qdrant_data:
+  redis_data:
+  postgres_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  gamemaster:
+    driver: bridge
