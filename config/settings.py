@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     
     # LLM Configuration
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    llm_model: str = Field(default="gpt-4-1106-preview", env="LLM_MODEL")
+    llm_model: str = Field(default="gpt-4.1-nano-2025-04-14", env="MAIN_MODEL")
     llm_max_tokens: int = Field(default=4000, env="LLM_MAX_TOKENS")
     llm_temperature: float = Field(default=0.7, env="LLM_TEMPERATURE")
     

@@ -50,33 +50,37 @@ async def main():
         # Get existing entities for testing
         print("\n2. Finding existing entities...")
         try:
-            search_response = await client.post(f"{BASE_URL}/search", json={
-                "query": "tavern bartender",
-                "limit": 5
+            # Search for different entity types separately
+            player_search = await client.post(f"{BASE_URL}/search", json={
+                "query": "adventurer player",
+                "limit": 2
             })
             
-            if search_response.status_code != 200:
+            npc_search = await client.post(f"{BASE_URL}/search", json={
+                "query": "Barliman bartender",
+                "limit": 2
+            })
+            
+            location_search = await client.post(f"{BASE_URL}/search", json={
+                "query": "tavern prancing pony",
+                "limit": 2
+            })
+            
+            # Check all search responses
+            if (player_search.status_code != 200 or 
+                npc_search.status_code != 200 or 
+                location_search.status_code != 200):
                 print("   ❌ Failed to search entities")
                 return
                 
-            entities = search_response.json()
-            if not entities:
-                print("   ❌ No entities found. Please run 'make init' first.")
-                return
+            players = player_search.json()
+            npcs = npc_search.json()
+            locations = location_search.json()
             
-            # Find player, NPC, and location
-            player = None
-            npc = None
-            location = None
-            
-            for entity_result in entities:
-                entity = entity_result["entity"]
-                if entity["type"] == "player":
-                    player = entity
-                elif entity["type"] == "npc":
-                    npc = entity
-                elif entity["type"] == "location":
-                    location = entity
+            # Find entities
+            player = players[0]["entity"] if players else None
+            npc = npcs[0]["entity"] if npcs else None
+            location = locations[0]["entity"] if locations else None
             
             if not player or not npc:
                 print("   ❌ Could not find required entities (player and NPC)")

@@ -13,6 +13,10 @@ help:
 	@echo "  test        - Run tests"
 	@echo "  logs        - Show logs from all services"
 	@echo "  api         - Start only the API service (for development)"
+	@echo "  api-direct  - Start API with direct uvicorn (better Ctrl+C handling)"
+	@echo "  api-env     - Start API with explicit .env loading"
+	@echo "  kill-api    - Force stop any running API processes on port 8000"
+	@echo "  restart-api - Restart the API service (kill + start)"
 	@echo "  shell       - Open shell in the API container"
 	@echo "  activate    - Show how to activate virtual environment"
 	@echo "  demo-ai     - Run AI features demo (requires OpenAI API key)"
@@ -53,11 +57,52 @@ clean:
 init:
 	@echo "Waiting for databases to be ready..."
 	sleep 10
-	PYTHONPATH=. ./venv/bin/python scripts/init_databases.py
+	@if [ -f .env ]; then \
+		export $$(grep -v '^#' .env | xargs) && PYTHONPATH=. ./venv/bin/python scripts/init_databases.py; \
+	else \
+		PYTHONPATH=. ./venv/bin/python scripts/init_databases.py; \
+	fi
 
 # Run the FastAPI application locally (for development)
 api:
-	cd src && PYTHONPATH=.. ../venv/bin/python main.py
+	@if [ -f .env ]; then \
+		echo "Loading environment variables from .env file..."; \
+		export $$(grep -v '^#' .env | xargs) && cd src && PYTHONPATH=.. ../venv/bin/python main.py; \
+	else \
+		echo "No .env file found, running with system environment..."; \
+		cd src && PYTHONPATH=.. ../venv/bin/python main.py; \
+	fi
+
+# Alternative API start with direct uvicorn (better signal handling)
+api-direct:
+	@if [ -f .env ]; then \
+		echo "Loading environment variables from .env file..."; \
+		export $$(grep -v '^#' .env | xargs) && cd src && PYTHONPATH=.. ../venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level info; \
+	else \
+		echo "No .env file found, running with system environment..."; \
+		cd src && PYTHONPATH=.. ../venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload --log-level info; \
+	fi
+
+# Start API with python-dotenv for explicit .env loading
+api-env:
+	cd src && PYTHONPATH=.. ../venv/bin/python -c "from dotenv import load_dotenv; load_dotenv('../.env'); import main"
+
+# Force stop any running API processes
+kill-api:
+	@echo "Stopping any running API processes on port 8000..."
+	@if lsof -i :8000 > /dev/null 2>&1; then \
+		echo "Found processes on port 8000, killing them..."; \
+		lsof -ti :8000 | xargs kill -9; \
+		echo "✅ Processes stopped"; \
+	else \
+		echo "No processes found on port 8000"; \
+	fi
+
+# Restart API service (kill existing + start new)
+restart-api: kill-api
+	@echo "Starting API server..."
+	@sleep 2
+	$(MAKE) api
 
 # Test Commands
 test:
@@ -125,7 +170,11 @@ activate:
 demo-ai:
 	@echo "Running AI features demo..."
 	@echo "Note: Requires OPENAI_API_KEY environment variable"
-	PYTHONPATH=. ./venv/bin/python example_ai_usage.py
+	@if [ -f .env ]; then \
+		export $$(grep -v '^#' .env | xargs) && PYTHONPATH=. ./venv/bin/python example_ai_usage.py; \
+	else \
+		PYTHONPATH=. ./venv/bin/python example_ai_usage.py; \
+	fi
 
 # Code Quality Commands
 format:

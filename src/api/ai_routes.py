@@ -9,6 +9,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
+from config.settings import settings
 from core.context_builder import context_builder
 from core.world_service import world_service
 from domain.entities import ActorType, EntityType, Event, ActionType
@@ -93,11 +94,13 @@ async def npc_dialogue(request: NPCDialogueRequest, background_tasks: Background
         event_id = uuid4()
         interaction_event = Event(
             id=event_id,
+            name=f"Dialogue between {player.name} and {npc.name}",
+            description=f"Player said: '{request.player_message}'",
             action_type=ActionType.DIALOGUE,
             actor_id=request.player_id,
             actor_type=ActorType.PLAYER,
             participants=[request.player_id, request.npc_id],
-            location_id=player.current_location_id,
+            location_id=getattr(player, 'current_location_id', None),
             before_state={
                 "player_message": request.player_message,
                 "npc_mood": npc.current_state.current_mood if npc.current_state else "unknown"
@@ -154,19 +157,22 @@ async def describe_world(request: WorldDescriptionRequest, background_tasks: Bac
         
         # Generate description
         ai_response = await ai_service.generate_world_description(
-            context_entities=context_entities,
-            player_request=request.request
+            player=player,
+            request=request.request,
+            context_entities=context_entities
         )
         
         # Create event for this exploration
         event_id = uuid4()
         exploration_event = Event(
             id=event_id,
+            name=f"World exploration by {player.name}",
+            description=f"Player requested: '{request.request}'",
             action_type=ActionType.WORLD_CHANGE,
             actor_id=request.player_id,
             actor_type=ActorType.PLAYER,
             participants=[request.player_id],
-            location_id=player.current_location_id,
+            location_id=getattr(player, 'current_location_id', None),
             before_state={
                 "exploration_request": request.request
             },
@@ -260,7 +266,7 @@ async def ai_health_check():
         
         return {
             "ai_service_initialized": is_healthy,
-            "llm_model": ai_service.client.model if hasattr(ai_service, 'client') else None,
+            "llm_model": settings.llm_model if is_healthy else None,
             "status": "healthy" if is_healthy else "not_initialized"
         }
         

@@ -13,6 +13,7 @@ from pydantic import BaseModel
 from config.settings import settings
 from core.world_service import world_service
 from domain.entities import BaseEntity, EntityType, NPC, Player, Location, Item, Event
+from monitoring.metrics import track_context_building
 
 logger = logging.getLogger(__name__)
 
@@ -179,6 +180,11 @@ class SmartContextBuilder:
                 )
                 
                 for entity, score in search_results:
+                    # Skip if entity is not a proper object (cache deserialization issue)
+                    if not hasattr(entity, 'id'):
+                        logger.debug(f"Skipping invalid entity in search results: {type(entity)}")
+                        continue
+                        
                     if entity.id not in seen_entities:
                         # Convert search score to priority boost
                         priority = self.calculate_entity_priority(entity, player, interaction_target)
@@ -235,6 +241,7 @@ class SmartContextBuilder:
         
         return entities_with_priority
     
+    @track_context_building("optimized_context")
     async def build_optimized_context(
         self,
         player: Player,
@@ -265,20 +272,32 @@ class SmartContextBuilder:
         priority_counts = {}
         
         for entity, priority in entities_with_priority:
+            # Include dead NPCs in context but with lower priority (unless they're the direct interaction target)
+            if (entity.type == EntityType.NPC and 
+                hasattr(entity, 'is_alive') and 
+                not entity.is_alive and 
+                entity.id != (interaction_target.id if interaction_target else None)):
+                # Lower priority for dead NPCs but still include them
+                priority = min(priority, ContextPriority.MEDIUM)
+                logger.debug(f"Including dead NPC in context with reduced priority: {entity.name}")
+                
+            # Skip dead NPCs only for direct dialogue attempts (handled in game_routes)
+            # For world descriptions, we want to mention them
+                
             estimated_tokens = self.estimate_entity_tokens(entity)
             
             # Always include critical entities
             if priority >= ContextPriority.CRITICAL:
                 selected_entities.append(entity)
                 total_tokens += estimated_tokens
-                priority_counts[priority] = priority_counts.get(priority, 0) + 1
+                priority_counts[str(priority)] = priority_counts.get(str(priority), 0) + 1
                 continue
             
             # Include others if within budget
             if total_tokens + estimated_tokens <= target_tokens and len(selected_entities) < self.max_entities:
                 selected_entities.append(entity)
                 total_tokens += estimated_tokens
-                priority_counts[priority] = priority_counts.get(priority, 0) + 1
+                priority_counts[str(priority)] = priority_counts.get(str(priority), 0) + 1
             else:
                 # Stop if we're running out of token budget
                 break

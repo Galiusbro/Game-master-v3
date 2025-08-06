@@ -79,6 +79,7 @@ python example_usage.py
 - **API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
+- **Prometheus Metrics**: http://localhost:8000/metrics
 - **Neo4j Browser**: http://localhost:7474 (neo4j/gamemaster123)
 - **Qdrant Dashboard**: http://localhost:6333/dashboard
 - **Grafana**: http://localhost:3000 (admin/admin)
@@ -137,7 +138,7 @@ POST /api/v1/search
   "limit": 5
 }
 
-# Получение контекста локации  
+# Получение контекста локации
 GET /api/v1/entities/{tavern_id}/context
 
 # История изменений
@@ -148,7 +149,7 @@ GET /api/v1/entities/{entity_id}/history
 POST /api/v1/ai/npc/dialogue
 {
   "player_id": "uuid",
-  "npc_id": "uuid", 
+  "npc_id": "uuid",
   "player_message": "Hello! Tell me about this place."
 }
 
@@ -161,7 +162,34 @@ POST /api/v1/ai/world/describe
 
 # Предварительный просмотр контекста ИИ
 GET /api/v1/ai/context/preview/{player_id}
+
+# Prometheus метрики
+GET /metrics
 ```
+
+## 📊 Мониторинг
+
+Система предоставляет детальные Prometheus метрики:
+
+### AI Operations
+
+- `gamemaster_ai_requests_total` - Общее количество AI запросов
+- `gamemaster_ai_request_duration_seconds` - Время выполнения AI запросов
+- `gamemaster_ai_tokens_total` - Количество использованных токенов
+- `gamemaster_ai_confidence_score` - Показатели уверенности AI
+- `gamemaster_ai_hallucinations_total` - Обнаруженные галлюцинации
+
+### Context Building
+
+- `gamemaster_context_entities_total` - Количество сущностей в контексте
+- `gamemaster_context_build_duration_seconds` - Время сборки контекста
+
+### Database Operations
+
+- `gamemaster_db_operations_total` - Операции с базами данных
+- `gamemaster_db_operation_duration_seconds` - Время выполнения запросов
+
+Доступ к метрикам: http://localhost:8000/metrics
 
 ## 📚 Документация
 

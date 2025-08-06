@@ -9,7 +9,9 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from api.ai_routes import router as ai_router
+from api.game_routes import router as game_router
 from core.world_service import world_service
+from infrastructure.cache_service import cache_service
 from domain.entities import (
     ActorType, BaseEntity, EntityType, Player, NPC, Location, Item, Event, Quest
 )
@@ -18,8 +20,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Include AI routes
+# Include AI routes  
 router.include_router(ai_router)
+
+# Include Natural Language Game routes
+router.include_router(game_router)
 
 
 # Request/Response models
@@ -400,3 +405,22 @@ async def get_recent_changes(
     except Exception as e:
         logger.error(f"Failed to get recent changes: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/cache/stats")
+async def get_cache_stats():
+    """Get cache performance statistics"""
+    try:
+        stats = await cache_service.get_stats()
+        return {
+            "cache_enabled": stats.get("enabled", False),
+            "hit_rate_percent": round(stats.get("hit_rate", 0), 2),
+            "memory_usage": stats.get("used_memory_human", "0B"),
+            "total_commands": stats.get("total_commands_processed", 0),
+            "connected_clients": stats.get("connected_clients", 0),
+            "cache_hits": stats.get("keyspace_hits", 0),
+            "cache_misses": stats.get("keyspace_misses", 0),
+        }
+    except Exception as e:
+        logger.error(f"Failed to get cache stats: {e}")
+        return {"cache_enabled": False, "error": str(e)}

@@ -1,0 +1,112 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Game Master V3 - AI Operations",
+    "tags": ["gamemaster", "ai"],
+    "style": "dark",
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "AI Requests per Minute",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(gamemaster_ai_requests_total[1m]) * 60",
+            "legendFormat": "{{operation_type}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Average AI Response Time",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "avg(rate(gamemaster_ai_request_duration_seconds_sum[5m]) / rate(gamemaster_ai_request_duration_seconds_count[5m]))",
+            "legendFormat": "Avg Response Time"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      },
+      {
+        "id": 3,
+        "title": "AI Requests by Operation Type",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "sum(gamemaster_ai_requests_total) by (operation_type)",
+            "legendFormat": "{{operation_type}}"
+          }
+        ],
+        "gridPos": { "h": 9, "w": 12, "x": 0, "y": 8 }
+      },
+      {
+        "id": 4,
+        "title": "Token Usage Over Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(gamemaster_ai_tokens_total[1m]) * 60",
+            "legendFormat": "{{operation_type}} tokens/min"
+          }
+        ],
+        "gridPos": { "h": 9, "w": 12, "x": 12, "y": 8 }
+      },
+      {
+        "id": 5,
+        "title": "AI Confidence Distribution",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "increase(gamemaster_ai_confidence_score_bucket[5m])",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 }
+      },
+      {
+        "id": 6,
+        "title": "Hallucination Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(gamemaster_ai_hallucinations_total[5m]) * 60",
+            "legendFormat": "Hallucinations/min"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 25 }
+      },
+      {
+        "id": 7,
+        "title": "Context Build Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg(rate(gamemaster_context_build_duration_seconds_sum[5m]) / rate(gamemaster_context_build_duration_seconds_count[5m]))",
+            "legendFormat": "Avg Context Build Time"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 25 }
+      },
+      {
+        "id": 8,
+        "title": "Database Operations",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(gamemaster_db_operations_total[1m]) * 60",
+            "legendFormat": "{{db_type}} {{operation}}"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 25 }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "refresh": "10s"
+  }
+}

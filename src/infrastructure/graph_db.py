@@ -268,22 +268,21 @@ class GraphDatabase:
         entity_types: Optional[List[EntityType]] = None
     ) -> List[BaseEntity]:
         """Traverse graph from starting entity"""
-        rel_filter = ""
+        
+        # Build the relationship pattern correctly for Neo4j
         if relationship_types:
             rel_types = "|".join(relationship_types)
-            rel_filter = f"[r:{rel_types}]"
+            rel_pattern = f"[r:{rel_types}*1..{max_depth}]"
         else:
-            rel_filter = "[r]"
+            rel_pattern = f"[r*1..{max_depth}]"
         
-        type_filter = ""
-        if entity_types:
-            type_labels = "|".join([t.value.title() for t in entity_types])
-            type_filter = f":{type_labels}"
-        
+        # Build query - Neo4j doesn't support complex label patterns in MATCH easily
+        # So we'll filter after matching all Entity nodes
         query = f"""
-        MATCH path = (start:Entity {{id: $start_id}})-{rel_filter}*1..{max_depth}-(connected:Entity{type_filter})
-        RETURN DISTINCT connected, labels(connected) as labels
-        ORDER BY length(path), connected.importance_level DESC, connected.created_at DESC
+        MATCH path = (start:Entity {{id: $start_id}})-{rel_pattern}-(connected:Entity)
+        WITH DISTINCT connected, labels(connected) as labels, length(path) as path_length
+        RETURN connected, labels, path_length
+        ORDER BY path_length, connected.importance_level DESC, connected.created_at DESC
         LIMIT {settings.graph_traversal_max_width}
         """
         
@@ -293,7 +292,12 @@ class GraphDatabase:
             async for record in result:
                 entity = self._record_to_entity(record)
                 if entity:
-                    entities.append(entity)
+                    # Filter by entity types if specified
+                    if entity_types:
+                        if entity.type in entity_types:
+                            entities.append(entity)
+                    else:
+                        entities.append(entity)
         
         logger.debug(f"Traversed graph from {start_entity_id}, found {len(entities)} entities")
         return entities
@@ -337,6 +341,24 @@ class GraphDatabase:
         props = dict(node)
         props['type'] = entity_type
         
+        # Fix Neo4j datetime objects - convert to ISO strings for Pydantic
+        import neo4j.time
+        from datetime import datetime
+        
+        for key, value in props.items():
+            if isinstance(value, neo4j.time.DateTime):
+                # Convert Neo4j DateTime to Python datetime, then to ISO string
+                dt = datetime(
+                    year=value.year,
+                    month=value.month, 
+                    day=value.day,
+                    hour=value.hour,
+                    minute=value.minute,
+                    second=value.second,
+                    microsecond=value.nanosecond // 1000  # Convert nanoseconds to microseconds
+                )
+                props[key] = dt.isoformat()
+        
         # Deserialize complex objects from JSON
         props = self._deserialize_complex_objects(props)
         
@@ -356,6 +378,7 @@ class GraphDatabase:
             return entity_class(**props)
         except Exception as e:
             logger.error(f"Failed to create entity from record: {e}")
+            logger.error(f"Props were: {props}")
             return None
 
 

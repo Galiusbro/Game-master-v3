@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 from uuid import UUID, uuid4
 
+from config.settings import settings
 from core.event_sourcing import event_store
 from domain.entities import (
     ActionType, ActorType, BaseEntity, ChangeLogEntry, EntityType,
@@ -16,6 +17,7 @@ from domain.entities import (
 from infrastructure.graph_db import graph_db
 from infrastructure.vector_db import vector_db
 from infrastructure.ai_service import ai_service
+from infrastructure.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,7 @@ class WorldService:
                 graph_db.connect(),
                 vector_db.connect(),
                 event_store.connect(),
+                cache_service.connect(),
             )
             
             # Initialize AI service if API key is provided
@@ -60,6 +63,7 @@ class WorldService:
                 graph_db.disconnect(),
                 vector_db.disconnect(),
                 event_store.disconnect(),
+                cache_service.disconnect(),
                 return_exceptions=True,
             )
             logger.info("World Service shutdown complete")
@@ -139,6 +143,9 @@ class WorldService:
             
             # Update in vector database
             await vector_db.update_entity(updated_entity)
+            
+            # Invalidate related caches
+            await cache_service.invalidate_entity(entity.id, entity.type)
             
             # Log the change
             await event_store.log_change(
@@ -236,8 +243,21 @@ class WorldService:
             raise
     
     async def get_entity(self, entity_id: UUID, entity_type: Optional[EntityType] = None) -> Optional[BaseEntity]:
-        """Get entity by ID"""
-        return await graph_db.get_entity(entity_id, entity_type)
+        """Get entity by ID with caching"""
+        
+        # Try cache first
+        cached_entity = await cache_service.get_entity(entity_id, entity_type)
+        if cached_entity:
+            return cached_entity
+        
+        # Cache miss - get from database
+        entity = await graph_db.get_entity(entity_id, entity_type)
+        
+        # Cache the result if found
+        if entity:
+            await cache_service.set_entity(entity)
+        
+        return entity
     
     async def search_entities(
         self,
@@ -248,12 +268,22 @@ class WorldService:
     ) -> List[Tuple[BaseEntity, float]]:
         """Search entities with optional graph context expansion"""
         
-        # First, semantic search via vector DB
+        # Try cache first (for simple searches without graph context)
+        if not include_graph_context:
+            cached_results = await cache_service.get_vector_search(query, entity_types, limit)
+            if cached_results:
+                return cached_results
+        
+        # Cache miss - perform search
         vector_results = await vector_db.search_entities(
             query=query,
             limit=limit,
             entity_types=entity_types,
         )
+        
+        # Cache simple search results
+        if not include_graph_context:
+            await cache_service.set_vector_search(query, entity_types, limit, vector_results)
         
         if not include_graph_context:
             return vector_results
@@ -274,13 +304,24 @@ class WorldService:
         max_depth: int = 2,
         entity_types: Optional[List[EntityType]] = None,
     ) -> List[BaseEntity]:
-        """Get contextual entities related to the given entity"""
+        """Get contextual entities related to the given entity with caching"""
         
-        return await graph_db.traverse_graph(
+        # Try cache first
+        cached_context = await cache_service.get_entity_context(entity_id, max_depth, entity_types)
+        if cached_context:
+            return cached_context
+        
+        # Cache miss - get from graph DB
+        context_entities = await graph_db.traverse_graph(
             start_entity_id=entity_id,
             max_depth=max_depth,
             entity_types=entity_types,
         )
+        
+        # Cache the results
+        await cache_service.set_entity_context(entity_id, max_depth, entity_types, context_entities)
+        
+        return context_entities
     
     async def create_relationship(
         self,

@@ -211,7 +211,7 @@ class VectorDatabase:
         limit: int = 10,
         entity_types: Optional[List[EntityType]] = None,
         filters: Optional[Dict[str, Any]] = None,
-        score_threshold: float = 0.5,
+        score_threshold: float = 0.0,
     ) -> List[Tuple[BaseEntity, float]]:
         """Search for entities by semantic similarity"""
         query_embedding = self._encode_text(query)
