@@ -98,6 +98,13 @@ kill-api:
 		echo "No processes found on port 8000"; \
 	fi
 
+# Alternative: force stop all Python processes (use with caution)
+kill-python:
+	@echo "⚠️  Stopping ALL Python processes..."
+	@pkill -f "python.*main.py" || echo "No matching Python processes found"
+	@pkill -f "uvicorn" || echo "No uvicorn processes found"
+	@echo "✅ Python processes stopped"
+
 # Restart API service (kill existing + start new)
 restart-api: kill-api
 	@echo "Starting API server..."

@@ -2,10 +2,12 @@
 AI Service for Game Master V3
 Handles LLM interactions with context assembly and anti-hallucination guards
 """
+import asyncio
+import hashlib
 import logging
 import re
 import time
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, AsyncIterator
 from uuid import UUID
 
 import openai
@@ -15,6 +17,7 @@ from pydantic import BaseModel, Field
 from config.settings import settings
 from domain.entities import BaseEntity, EntityType, NPC, NPCPersonality, Player
 from monitoring.metrics import track_ai_operation
+from infrastructure.command_classification_service import command_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +49,7 @@ class AIService:
         self.client = None
         self.tokenizer = None
         self.is_initialized = False
+        self.cache_service = None
         
         # Prompt templates
         self.templates = {
@@ -73,36 +77,47 @@ CURRENT SITUATION:
 PLAYER ACTION: {player_action}
 
 Respond as {npc_name} would, staying true to their personality and the provided context. Format your response as direct dialogue.""",
-                max_tokens=800,
+                max_tokens=1200,
                 temperature=0.8,
                 anti_hallucination_instructions="Only reference entities, locations, and facts explicitly mentioned in the provided context. Do not invent new information."
             ),
             
             "world_description": PromptTemplate(
-                system_prompt="""You are an AI Game Master describing a fantasy world to players.
-Provide rich, immersive descriptions based strictly on the provided context.
+                system_prompt="""You are a Master Storyteller and AI Game Master crafting an immersive fantasy RPG experience.
+Your mission is to create rich, vivid, and captivating descriptions that transport players into a living world.
 
-CRITICAL RULES:
-- Only describe what is explicitly provided in the context
-- Do not add new details not mentioned in the source material
-- Maintain consistency with established world facts
-- If asked about something not in context, acknowledge the limitation
-- Create atmospheric descriptions while staying factual
-- If dice roll results are provided, incorporate them into the description""",
-                user_template="""WORLD CONTEXT:
+EXCELLENCE PRINCIPLES:
+- Create cinematic, multi-sensory descriptions (sight, sound, smell, touch, taste)
+- Use only information explicitly provided in the context - never invent facts
+- Layer details: immediate → atmospheric → character-specific observations
+- Maintain perfect consistency with established world lore
+- Adapt descriptions to character knowledge (wizards notice magic, rogues spot traps)
+- Build appropriate mood and tension for each situation
+
+DESCRIPTION MASTERY:
+1. IMMEDIATE IMPACT: What hits their senses first?
+2. VISUAL RICHNESS: Colors, textures, lighting, movement
+3. ATMOSPHERIC DEPTH: Sounds, smells, temperature, mood
+4. CHARACTER INSIGHTS: What would their class/background notice?
+5. INTERACTIVE POSSIBILITIES: What can they examine or interact with?
+
+Transform every moment into an memorable scene worthy of an epic fantasy novel.""",
+                user_template="""COMPREHENSIVE WORLD CONTEXT:
 {context}
 
-ENTITIES PRESENT:
+ENTITIES AND CHARACTERS PRESENT:
 {entities}
+
+CHARACTER BACKGROUND: Consider the player's class, skills, and background for specialized observations.
 
 PLAYER REQUEST: {request}
 
 {dice_context}
 
-Provide an immersive description based solely on the provided context.""",
-                max_tokens=600,
+Craft a masterful, immersive description that brings this scene to life. Layer rich sensory details and character-specific insights while remaining absolutely faithful to the provided context. Make this moment unforgettable.""",
+                max_tokens=1000,
                 temperature=0.7,
-                anti_hallucination_instructions="Describe only what is explicitly mentioned in the context. Do not add fictional details."
+                anti_hallucination_instructions="Describe only elements explicitly mentioned in context. Use character expertise to highlight relevant details, but never invent new information."
             ),
             
             "dice_outcome_narration": PromptTemplate(
@@ -130,7 +145,7 @@ CHARACTER INFO:
 ACTION ATTEMPTED: {action_description}
 
 Narrate what happens as a result of this dice roll. Be vivid and engaging while respecting the success/failure outcome.""",
-                max_tokens=400,
+                max_tokens=800,
                 temperature=0.8,
                 anti_hallucination_instructions="Only describe outcomes consistent with the dice results and established context. Do not invent new world elements."
             ),
@@ -157,7 +172,7 @@ RELEVANT CONTEXT:
 {context}
 
 Determine the outcome of this action, explaining the reasoning and any consequences.""",
-                max_tokens=500,
+                max_tokens=900,
                 temperature=0.6,
                 anti_hallucination_instructions="Base outcomes only on provided character stats, world rules, and context. Do not invent new mechanics or rules."
             )
@@ -177,6 +192,15 @@ Determine the outcome of this action, explaining the reasoning and any consequen
                 # Fallback to GPT-4 tokenizer for newer models
                 logger.warning(f"Model {settings.llm_model} not found in tiktoken, using GPT-4 tokenizer as fallback")
                 self.tokenizer = tiktoken.encoding_for_model("gpt-4")
+            
+            # Initialize cache service
+            try:
+                from infrastructure.cache_service import cache_service
+                self.cache_service = cache_service
+                logger.info("AI Service cache integration enabled")
+            except Exception as e:
+                logger.warning(f"AI Service cache integration failed: {e}")
+                self.cache_service = None
             
             # Test connection
             await self._test_connection()
@@ -207,6 +231,187 @@ Determine the outcome of this action, explaining the reasoning and any consequen
             # Rough estimation if tokenizer not available
             return len(text.split()) * 1.3
         return len(self.tokenizer.encode(text))
+    
+    def analyze_prompt_tokens(self, messages: List[Dict]) -> Dict[str, int]:
+        """Analyze token usage breakdown in prompt"""
+        breakdown = {}
+        total = 0
+        
+        for msg in messages:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            tokens = self.count_tokens(content)
+            
+            breakdown[role] = breakdown.get(role, 0) + tokens
+            total += tokens
+        
+        breakdown["total"] = total
+        return breakdown
+    
+    def _create_context_hash(self, messages: List[Dict], temperature: float, max_tokens: int) -> str:
+        """Create a hash for AI request context for caching"""
+        context_data = {
+            "messages": messages,
+            "model": settings.llm_model,
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+        
+        # Create a stable hash
+        content = str(context_data)
+        return hashlib.md5(content.encode()).hexdigest()[:16]
+    
+    async def _get_cached_response(self, context_hash: str) -> Optional[AIResponse]:
+        """Get cached AI response"""
+        if not self.cache_service:
+            return None
+        
+        try:
+            cached_data = await self.cache_service.get_ai_response(context_hash)
+            if cached_data:
+                logger.debug(f"AI Cache HIT: {context_hash}")
+                # Return cached response with zero response time (cached)
+                cached_data["response_time"] = 0.001  # Minimal cache access time
+                return AIResponse(**cached_data)
+        except Exception as e:
+            logger.warning(f"AI cache get error: {e}")
+        
+        logger.debug(f"AI Cache MISS: {context_hash}")
+        return None
+    
+    async def _cache_response(self, context_hash: str, response: AIResponse) -> None:
+        """Cache AI response"""
+        if not self.cache_service:
+            return
+        
+        try:
+            # Cache the response data (excluding response_time for future calls)
+            cache_data = response.dict()
+            await self.cache_service.set_ai_response(context_hash, cache_data)
+            logger.debug(f"AI response cached: {context_hash}")
+        except Exception as e:
+            logger.warning(f"AI cache set error: {e}")
+    
+    def _optimize_context_messages(self, messages: List[Dict], target_tokens: int) -> List[Dict]:
+        """Smart context optimization preserving quality"""
+        optimized = []
+        current_tokens = 0
+        
+        # Always keep system prompts (they're usually small and critical)
+        for msg in messages:
+            if msg.get("role") == "system":
+                tokens = self.count_tokens(msg["content"])
+                optimized.append(msg)
+                current_tokens += tokens
+        
+        # Smart optimization of user messages
+        for msg in messages:
+            if msg.get("role") == "user":
+                content = msg["content"]
+                tokens = self.count_tokens(content)
+                
+                if current_tokens + tokens > target_tokens:
+                    # Smart context optimization
+                    if "CONTEXT:" in content:
+                        content = self._smart_truncate_context(content, target_tokens - current_tokens)
+                    else:
+                        # If no context section, just limit the entire content
+                        content = self._truncate_text_smartly(content, target_tokens - current_tokens)
+                
+                optimized.append({"role": msg["role"], "content": content})
+                current_tokens += self.count_tokens(content)
+        
+        logger.info(f"Smart context optimized: {self.analyze_prompt_tokens(messages)['total']} -> {self.analyze_prompt_tokens(optimized)['total']} tokens")
+        return optimized
+    
+    def _smart_truncate_context(self, content: str, available_tokens: int) -> str:
+        """Smart context truncation preserving important information"""
+        parts = content.split("CONTEXT:")
+        if len(parts) < 2:
+            return content
+        
+        prefix = parts[0]
+        context_part = parts[1]
+        
+        prefix_tokens = self.count_tokens(prefix)
+        remaining_tokens = available_tokens - prefix_tokens - 50  # Reserve 50 for formatting
+        
+        if remaining_tokens < 100:
+            # Not enough space for meaningful context
+            return prefix + "CONTEXT:\n[Context removed due to space constraints]\n"
+        
+        # Parse context into entities and prioritize
+        context_lines = context_part.split('\n')
+        important_lines = []
+        regular_lines = []
+        
+        for line in context_lines:
+            line = line.strip()
+            if not line:
+                continue
+                
+            # Prioritize lines using modern content classification
+            priority, confidence = command_classifier.assess_content_priority(line)
+            
+            if priority == "high_priority" and confidence > 0.4:
+                important_lines.append(line)
+            else:
+                regular_lines.append(line)
+        
+        # Build optimized context
+        optimized_context = ""
+        used_tokens = 0
+        
+        # Add important lines first
+        for line in important_lines:
+            test_context = optimized_context + line + "\n"
+            tokens = self.count_tokens(test_context)
+            if tokens < remaining_tokens:
+                optimized_context = test_context
+                used_tokens = tokens
+            else:
+                break
+        
+        # Add regular lines if space allows
+        for line in regular_lines:
+            test_context = optimized_context + line + "\n"
+            tokens = self.count_tokens(test_context)
+            if tokens < remaining_tokens:
+                optimized_context = test_context
+                used_tokens = tokens
+            else:
+                break
+        
+        # Add truncation notice if we removed content
+        if len(important_lines) + len(regular_lines) > optimized_context.count('\n'):
+            optimized_context += "[Additional context available but truncated for efficiency]\n"
+        
+        result = prefix + "CONTEXT:\n" + optimized_context
+        logger.info(f"Smart truncation: preserved {used_tokens}/{self.count_tokens(context_part)} context tokens")
+        return result
+    
+    def _truncate_text_smartly(self, text: str, available_tokens: int) -> str:
+        """Smart text truncation preserving sentence structure"""
+        if self.count_tokens(text) <= available_tokens:
+            return text
+        
+        # Try to truncate at sentence boundaries
+        sentences = text.split('.')
+        truncated = ""
+        
+        for sentence in sentences:
+            test_text = truncated + sentence + "."
+            if self.count_tokens(test_text) < available_tokens - 20:  # Reserve space for truncation notice
+                truncated = test_text
+            else:
+                break
+        
+        if not truncated:
+            # Fallback: character-level truncation
+            target_chars = int(available_tokens * 4)  # Rough estimate
+            truncated = text[:target_chars]
+        
+        return truncated + " [Content truncated]"
     
     def build_npc_profile_text(self, npc: NPC) -> str:
         """Build comprehensive NPC profile text for prompts"""
@@ -308,6 +513,21 @@ Determine the outcome of this action, explaining the reasoning and any consequen
                 "content": f"REMINDER: {template.anti_hallucination_instructions}"
             })
         
+        # Analyze and optimize context before caching/calling
+        token_breakdown = self.analyze_prompt_tokens(messages)
+        logger.info(f"NPC dialogue tokens - Total: {token_breakdown['total']}, System: {token_breakdown.get('system', 0)}, User: {token_breakdown.get('user', 0)}")
+        
+        # Optimize if context is too large (minimal optimization for maximum quality)
+        if token_breakdown['total'] > settings.context_max_tokens * 0.95:
+            logger.warning(f"Large context detected ({token_breakdown['total']} tokens), optimizing...")
+            messages = self._optimize_context_messages(messages, int(settings.context_max_tokens * 0.95))
+        
+        # Check cache first
+        context_hash = self._create_context_hash(messages, template.temperature, template.max_tokens)
+        cached_response = await self._get_cached_response(context_hash)
+        if cached_response:
+            return cached_response
+        
         try:
             # Make API call
             response = await self.client.chat.completions.create(
@@ -329,7 +549,7 @@ Determine the outcome of this action, explaining the reasoning and any consequen
             # Extract cited entities (simple implementation)
             cited_entities = [entity.name for entity in context_entities if entity.name.lower() in content.lower()]
             
-            return AIResponse(
+            ai_response = AIResponse(
                 content=content,
                 confidence=0.9 if not hallucination_detected else 0.6,
                 tokens_used=tokens_used,
@@ -338,6 +558,11 @@ Determine the outcome of this action, explaining the reasoning and any consequen
                 cited_entities=cited_entities,
                 warnings=warnings
             )
+            
+            # Cache the response for future use
+            await self._cache_response(context_hash, ai_response)
+            
+            return ai_response
             
         except Exception as e:
             logger.error(f"AI generation failed: {e}")
@@ -419,6 +644,21 @@ Determine the outcome of this action, explaining the reasoning and any consequen
             )}
         ]
         
+        # Analyze and optimize context before caching/calling
+        token_breakdown = self.analyze_prompt_tokens(messages)
+        logger.info(f"World description tokens - Total: {token_breakdown['total']}, System: {token_breakdown.get('system', 0)}, User: {token_breakdown.get('user', 0)}")
+        
+        # Optimize if context is too large (minimal optimization for maximum quality)
+        if token_breakdown['total'] > settings.context_max_tokens * 0.95:
+            logger.warning(f"Large world context detected ({token_breakdown['total']} tokens), optimizing...")
+            messages = self._optimize_context_messages(messages, int(settings.context_max_tokens * 0.95))
+        
+        # Check cache first
+        context_hash = self._create_context_hash(messages, template.temperature, template.max_tokens)
+        cached_response = await self._get_cached_response(context_hash)
+        if cached_response:
+            return cached_response
+        
         try:
             response = await self.client.chat.completions.create(
                 model=settings.llm_model,
@@ -438,7 +678,7 @@ Determine the outcome of this action, explaining the reasoning and any consequen
             
             cited_entities = [entity.name for entity in context_entities if entity.name.lower() in content.lower()]
             
-            return AIResponse(
+            ai_response = AIResponse(
                 content=content,
                 confidence=0.9 if not hallucination_detected else 0.7,
                 tokens_used=tokens_used,
@@ -447,6 +687,11 @@ Determine the outcome of this action, explaining the reasoning and any consequen
                 cited_entities=cited_entities,
                 warnings=warnings
             )
+            
+            # Cache the response for future use
+            await self._cache_response(context_hash, ai_response)
+            
+            return ai_response
             
         except Exception as e:
             logger.error(f"World description generation failed: {e}")
@@ -544,6 +789,135 @@ Armor Class: {player.stats.armor_class}
                 hallucination_detected=True,
                 warnings=[f"Generation failed: {str(e)}"]
             )
+    
+    # STREAMING METHODS FOR REAL-TIME RESPONSES
+    async def stream_npc_dialogue(
+        self,
+        npc: BaseEntity,
+        player_action: str,
+        context: str,
+        situation: str = "ongoing conversation"
+    ) -> AsyncIterator[str]:
+        """Stream NPC dialogue response in real-time"""
+        template = self.templates["npc_dialogue"]
+        
+        npc_profile = self.build_npc_profile_text(npc) if hasattr(npc, 'personality') else f"Name: {npc.name}\nDescription: {npc.description}"
+        
+        messages = [
+            {"role": "system", "content": template.system_prompt},
+            {"role": "user", "content": template.user_template.format(
+                context=context,
+                npc_profile=npc_profile,
+                situation=situation,
+                player_action=player_action,
+                npc_name=npc.name
+            )}
+        ]
+        
+        # Check cache first
+        context_hash = self._create_context_hash(messages, template.temperature, template.max_tokens)
+        cached_response = await self._get_cached_response(context_hash)
+        if cached_response:
+            logger.info("Streaming cached NPC dialogue response")
+            # Stream cached response word by word for consistent UX
+            words = cached_response.split()
+            for i, word in enumerate(words):
+                yield word + (" " if i < len(words) - 1 else "")
+                await asyncio.sleep(0.05)  # Simulate typing speed
+            return
+        
+        # Stream from OpenAI
+        response_text = ""
+        async for chunk in self._stream_openai_response(messages, template):
+            if chunk:
+                response_text += chunk
+                yield chunk
+        
+        # Cache the complete response
+        try:
+            await self._set_cached_response(context_hash, response_text)
+        except Exception as e:
+            logger.warning(f"Failed to cache streaming response: {e}")
+    
+    async def stream_world_description(
+        self,
+        request: str,
+        context: str,
+        entities: List[BaseEntity],
+        dice_context: str = ""
+    ) -> AsyncIterator[str]:
+        """Stream world description response in real-time"""
+        template = self.templates["world_description"]
+        
+        entities_text = "\n".join([
+            f"- {entity.name} ({entity.type.value}): {entity.description}"
+            for entity in entities
+        ])
+        
+        messages = [
+            {"role": "system", "content": template.system_prompt},
+            {"role": "user", "content": template.user_template.format(
+                context=context,
+                entities=entities_text,
+                request=request,
+                dice_context=dice_context
+            )}
+        ]
+        
+        # Check cache first
+        context_hash = self._create_context_hash(messages, template.temperature, template.max_tokens)
+        cached_response = await self._get_cached_response(context_hash)
+        if cached_response:
+            logger.info("Streaming cached world description")
+            # Stream cached response word by word
+            words = cached_response.split()
+            for i, word in enumerate(words):
+                yield word + (" " if i < len(words) - 1 else "")
+                await asyncio.sleep(0.03)  # Slightly faster for descriptions
+            return
+        
+        # Stream from OpenAI
+        response_text = ""
+        async for chunk in self._stream_openai_response(messages, template):
+            if chunk:
+                response_text += chunk
+                yield chunk
+        
+        # Cache the complete response
+        try:
+            await self._set_cached_response(context_hash, response_text)
+        except Exception as e:
+            logger.warning(f"Failed to cache streaming response: {e}")
+    
+    async def _stream_openai_response(
+        self,
+        messages: List[Dict],
+        template: PromptTemplate
+    ) -> AsyncIterator[str]:
+        """Stream response from OpenAI API"""
+        try:
+            # Optimize context if needed
+            token_breakdown = self.analyze_prompt_tokens(messages)
+            if token_breakdown['total'] > settings.context_max_tokens * 0.95:
+                logger.warning(f"Large context detected ({token_breakdown['total']} tokens), optimizing...")
+                messages = self._optimize_context_messages(messages, int(settings.context_max_tokens * 0.95))
+            
+            # Stream from OpenAI
+            stream = await self.client.chat.completions.create(
+                model=settings.llm_model,
+                messages=messages,
+                max_tokens=template.max_tokens,
+                temperature=template.temperature,
+                stream=True
+            )
+            
+            async for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+                    
+        except Exception as e:
+            logger.error(f"OpenAI streaming error: {e}")
+            yield f"[Error: Could not stream response - {str(e)}]"
 
 
 # Global AI service instance

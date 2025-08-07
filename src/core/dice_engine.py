@@ -12,6 +12,7 @@ from datetime import datetime
 from domain.entities import (
     DiceRoll, DiceRollType, ActionSequence, Player, NPC, AbilityScore, SkillType
 )
+from infrastructure.command_classification_service import command_classifier
 
 logger = logging.getLogger(__name__)
 
@@ -332,8 +333,9 @@ class DiceEngine:
         # Context modifiers
         base_dc = DifficultyClass.MEDIUM  # Default to DC 15
         
-        # Stealth actions
-        if any(word in action_lower for word in ['sneak', 'stealth', 'hide', 'подкрасться', 'спрятаться']):
+        # Stealth actions - check using modern classification
+        detected_action, action_conf = command_classifier.classify_game_action(action_description)
+        if detected_action.value == 'stealth' and action_conf > 0.5:
             base_dc = DifficultyClass.MEDIUM  # DC 15
             
             # Harder in daylight, easier at night
@@ -342,8 +344,8 @@ class DiceEngine:
             elif context and context.get('time_of_day') == 'night':
                 base_dc -= 2
                 
-        # Persuasion/Deception
-        elif any(word in action_lower for word in ['persuade', 'convince', 'lie', 'deceive', 'убедить', 'обмануть']):
+        # Use action classification instead of keywords
+        elif detected_action.value in ['persuasion', 'deception'] and action_conf > 0.5:
             base_dc = DifficultyClass.MEDIUM  # DC 15
             
             # Harder if target is hostile
@@ -352,20 +354,16 @@ class DiceEngine:
             elif context and context.get('target_attitude') == 'friendly':
                 base_dc -= 5
                 
-        # Physical tasks
-        elif any(word in action_lower for word in ['climb', 'jump', 'lift', 'break', 'карабкаться', 'прыгать']):
+        elif detected_action.value == 'athletics' and action_conf > 0.5:
             base_dc = DifficultyClass.MEDIUM  # DC 15
             
-        # Investigation/Perception
-        elif any(word in action_lower for word in ['search', 'look', 'find', 'notice', 'искать', 'найти']):
+        elif detected_action.value in ['search', 'investigation'] and action_conf > 0.5:
             base_dc = DifficultyClass.EASY  # DC 10 - finding obvious things should be easier
             
-        # Combat maneuvers
-        elif any(word in action_lower for word in ['disarm', 'trip', 'grapple', 'разоружить']):
+        elif detected_action.value == 'combat' and action_conf > 0.5:
             base_dc = DifficultyClass.HARD  # DC 20 - combat maneuvers are challenging
             
-        # Magic/arcane
-        elif any(word in action_lower for word in ['cast', 'magic', 'spell', 'колдовать', 'магия']):
+        elif detected_action.value == 'magic' and action_conf > 0.5:
             base_dc = DifficultyClass.MEDIUM  # DC 15
             
         return max(5, min(30, base_dc))  # Clamp between 5 and 30
@@ -389,8 +387,11 @@ class DiceEngine:
         
         action_lower = action_description.lower()
         
-        # Determine what type of check this is and make appropriate rolls
-        if any(word in action_lower for word in ['sneak', 'stealth', 'hide', 'подкрасться']):
+        # Use modern action classification to determine type of check
+        detected_action, action_conf = command_classifier.classify_game_action(action_description)
+        
+        # Skill-based actions
+        if detected_action.value == 'stealth' and action_conf > 0.5:
             # Stealth check
             dc = self.determine_difficulty_class(action_description, context)
             roll = self.make_skill_check(
@@ -402,7 +403,7 @@ class DiceEngine:
             sequence.primary_roll = roll
             sequence.success = roll.is_success
             
-        elif any(word in action_lower for word in ['persuade', 'convince', 'убедить']):
+        elif detected_action.value == 'persuasion' and action_conf > 0.5:
             # Persuasion check
             dc = self.determine_difficulty_class(action_description, context)
             roll = self.make_skill_check(
@@ -414,7 +415,7 @@ class DiceEngine:
             sequence.primary_roll = roll
             sequence.success = roll.is_success
             
-        elif any(word in action_lower for word in ['lie', 'deceive', 'обмануть']):
+        elif detected_action.value == 'deception' and action_conf > 0.5:
             # Deception check
             dc = self.determine_difficulty_class(action_description, context)
             roll = self.make_skill_check(
@@ -426,7 +427,7 @@ class DiceEngine:
             sequence.primary_roll = roll
             sequence.success = roll.is_success
             
-        elif any(word in action_lower for word in ['pickpocket', 'steal', 'украсть']):
+        elif detected_action.value == 'sleight_of_hand' and action_conf > 0.5:
             # Sleight of Hand check
             dc = self.determine_difficulty_class(action_description, context)
             roll = self.make_skill_check(
@@ -438,7 +439,7 @@ class DiceEngine:
             sequence.primary_roll = roll
             sequence.success = roll.is_success
             
-        elif any(word in action_lower for word in ['search', 'investigate', 'examine', 'искать']):
+        elif detected_action.value in ['search', 'investigation'] and action_conf > 0.5:
             # Investigation check
             dc = self.determine_difficulty_class(action_description, context)
             roll = self.make_skill_check(
@@ -450,7 +451,7 @@ class DiceEngine:
             sequence.primary_roll = roll
             sequence.success = roll.is_success
             
-        elif any(word in action_lower for word in ['attack', 'hit', 'strike', 'атаковать']):
+        elif detected_action.value == 'combat' and action_conf > 0.5:
             # Attack roll - need target AC
             target_ac = context.get('target_ac', 15) if context else 15
             attack_roll = self.make_attack_roll(
@@ -475,19 +476,15 @@ class DiceEngine:
         else:
             # Default to a general ability check
             dc = self.determine_difficulty_class(action_description, context)
-            # Try to guess the most appropriate ability
-            if any(word in action_lower for word in ['strong', 'force', 'break', 'силой']):
-                ability = AbilityScore.STRENGTH
-            elif any(word in action_lower for word in ['quick', 'fast', 'dodge', 'быстро']):
-                ability = AbilityScore.DEXTERITY
-            elif any(word in action_lower for word in ['remember', 'know', 'recall', 'помнить']):
-                ability = AbilityScore.INTELLIGENCE
-            elif any(word in action_lower for word in ['notice', 'sense', 'feel', 'заметить']):
-                ability = AbilityScore.WISDOM
-            elif any(word in action_lower for word in ['charm', 'influence', 'очаровать']):
-                ability = AbilityScore.CHARISMA
+            # Use modern ability detection instead of keywords
+            detected_ability, confidence = command_classifier.detect_ability_focus(action_description)
+            
+            if detected_ability and confidence > 0.4:
+                ability = detected_ability
+                logger.debug(f"Detected ability {ability.value} with confidence {confidence:.2f}")
             else:
-                ability = AbilityScore.WISDOM  # Default
+                ability = AbilityScore.WISDOM  # Default fallback
+                logger.debug(f"No clear ability detected (conf: {confidence:.2f}), using WISDOM default")
                 
             roll = self.make_ability_check(
                 actor,

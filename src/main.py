@@ -42,6 +42,15 @@ logger = logging.getLogger(__name__)
 def signal_handler(signum, frame):
     """Handle shutdown signals gracefully"""
     logger.info(f"Received signal {signum}, shutting down gracefully...")
+    # For reload mode, we need to ensure all child processes are terminated
+    import os
+    if settings.app_debug:
+        logger.info("Debug mode detected, ensuring all child processes terminate...")
+        # Send signal to process group to handle uvicorn's child processes
+        try:
+            os.killpg(os.getpgid(0), signum)
+        except (OSError, ProcessLookupError):
+            pass
     sys.exit(0)
 
 
@@ -124,6 +133,7 @@ if __name__ == "__main__":
     
     logger.info("Starting uvicorn server...")
     try:
+        # Pass these signal handling options to uvicorn
         uvicorn.run(
             "main:app",
             host=settings.app_host,
@@ -134,6 +144,10 @@ if __name__ == "__main__":
             # These options help with signal handling
             access_log=True,
             use_colors=True,
+            # Important: these help with proper signal propagation in reload mode
+            reload_delay=0.25,
+            # Ensure proper shutdown in reload mode
+            workers=1 if not settings.app_debug else None,
         )
     except KeyboardInterrupt:
         logger.info("Received KeyboardInterrupt, shutting down...")

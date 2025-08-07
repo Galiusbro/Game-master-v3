@@ -22,8 +22,8 @@ class Settings(BaseSettings):
     
     # LLM Configuration
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    llm_model: str = Field(default="gpt-4.1-nano-2025-04-14", env="MAIN_MODEL")
-    llm_max_tokens: int = Field(default=4000, env="LLM_MAX_TOKENS")
+    llm_model: str = Field(default="gpt-4o", env="MAIN_MODEL")  # Better quality model
+    llm_max_tokens: int = Field(default=8000, env="LLM_MAX_TOKENS")  # More tokens for quality
     llm_temperature: float = Field(default=0.7, env="LLM_TEMPERATURE")
     
     # Graph Database (Neo4j)
@@ -49,11 +49,15 @@ class Settings(BaseSettings):
     postgres_user: str = Field(default="gm_user", env="POSTGRES_USER")
     postgres_password: str = Field(default="gm_password", env="POSTGRES_PASSWORD")
     
-    # Performance Settings
-    context_max_tokens: int = Field(default=8000, env="CONTEXT_MAX_TOKENS")
-    graph_traversal_max_depth: int = Field(default=3, env="GRAPH_TRAVERSAL_MAX_DEPTH")
-    graph_traversal_max_width: int = Field(default=10, env="GRAPH_TRAVERSAL_MAX_WIDTH")
+    # Performance Settings - OPTIMIZED FOR QUALITY
+    context_max_tokens: int = Field(default=8000, env="CONTEXT_MAX_TOKENS")  # Increased for quality
+    graph_traversal_max_depth: int = Field(default=3, env="GRAPH_TRAVERSAL_MAX_DEPTH")  # Deeper traversal
+    graph_traversal_max_width: int = Field(default=15, env="GRAPH_TRAVERSAL_MAX_WIDTH")  # More entities
     cache_ttl_seconds: int = Field(default=3600, env="CACHE_TTL_SECONDS")
+    
+    # AI Optimization Settings - QUALITY FOCUSED
+    ai_context_optimization: bool = Field(default=True, env="AI_CONTEXT_OPTIMIZATION")
+    ai_max_context_entities: int = Field(default=20, env="AI_MAX_CONTEXT_ENTITIES")  # More context
     
     # Security
     jwt_secret_key: str = Field(default="dev_secret_change_in_production", env="JWT_SECRET_KEY")

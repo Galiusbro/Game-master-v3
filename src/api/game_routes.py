@@ -12,7 +12,8 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
-from core.semantic_parser import semantic_parser, GameAction
+from core.semantic_parser import semantic_parser
+from infrastructure.command_classification_service import GameAction, command_classifier
 from core.world_service import world_service
 from core.dice_engine import dice_engine
 from api.ai_routes import NPCDialogueRequest, WorldDescriptionRequest
@@ -352,19 +353,16 @@ async def _handle_combat(request: GameCommandRequest, parsed) -> GameCommandResp
     warnings = ["Combat system not fully implemented - using narrative description"]
     
     if parsed.target_npc_id:
-        # Check if player command explicitly mentions death/killing
-        player_death_keywords = ["dies", "dead", "kill", "killed", "slay", "slain", "defeat", "destroy", "murder"]
-        player_command_lower = request.command.lower()
-        command_mentions_death = any(keyword in player_command_lower for keyword in player_death_keywords)
+        # Check if player command or AI response mentions death/killing using modern classification
+        command_death_event, command_death_conf = command_classifier.detect_special_event(request.command)
+        ai_death_event, ai_death_conf = command_classifier.detect_special_event(ai_response.content)
         
-        # Also check AI response for death keywords (in case AI cooperates)
-        ai_death_keywords = ["dies", "dead", "killed", "slain", "defeated", "falls", "perishes", "expires", "death"]
-        ai_content_lower = ai_response.content.lower()
-        ai_mentions_death = any(keyword in ai_content_lower for keyword in ai_death_keywords)
+        command_mentions_death = command_death_event == "death_event" and command_death_conf > 0.5
+        ai_mentions_death = ai_death_event == "death_event" and ai_death_conf > 0.5
         
         if command_mentions_death or ai_mentions_death:
             try:
-                logger.info(f"🗡️ Death command detected! Updating NPC {parsed.target_npc_id}")
+                logger.info(f"🗡️ Death event detected! Command: {command_death_conf:.2f}, AI: {ai_death_conf:.2f}, NPC: {parsed.target_npc_id}")
                 
                 # Get the NPC entity
                 npc = await world_service.get_entity(parsed.target_npc_id, EntityType.NPC)
@@ -426,6 +424,7 @@ async def _handle_combat(request: GameCommandRequest, parsed) -> GameCommandResp
                     warnings.append(f"NPC {npc.name} state updated to deceased")
                     
                     # Override AI response if it refused to cooperate
+                    ai_content_lower = ai_response.content.lower()
                     if "can't assist" in ai_content_lower or "sorry" in ai_content_lower:
                         ai_response.content = f"In a tragic turn of events, {npc.name} has fallen. The tavern falls silent as the gravity of what has transpired settles over the room."
                         warnings.append("AI response overridden due to content policy - death event processed")
@@ -531,12 +530,12 @@ async def _handle_magic(request: GameCommandRequest, parsed) -> GameCommandRespo
     """Handle magic spells and rituals with automatic event creation"""
     logger.info(f"🔮 Processing magic action: {parsed.raw_command}")
     
-    # Detect resurrection magic specifically
-    resurrection_keywords = ["resurrection", "resurrect", "revival", "revive", "воскрешение", "воскресить"]
-    is_resurrection = any(keyword in parsed.raw_command.lower() for keyword in resurrection_keywords)
+    # Detect resurrection magic using modern classification
+    resurrection_event, resurrection_conf = command_classifier.detect_special_event(parsed.raw_command)
+    is_resurrection = resurrection_event == "resurrection_event" and resurrection_conf > 0.5
     
     if is_resurrection and parsed.target_npc_id:
-        logger.info(f"✨ Resurrection spell detected for NPC: {parsed.target_npc_id}")
+        logger.info(f"✨ Resurrection spell detected! Confidence: {resurrection_conf:.2f}, NPC: {parsed.target_npc_id}")
         
         try:
             from core.world_service import world_service

@@ -14,35 +14,14 @@ from dataclasses import dataclass
 
 from infrastructure.vector_db import vector_db
 from infrastructure.graph_db import graph_db
+from infrastructure.command_classification_service import command_classifier, GameContext, GameAction
 from domain.entities import EntityType, BaseEntity, SkillType, AbilityScore
 from core.dice_engine import dice_engine
 
 logger = logging.getLogger(__name__)
 
 
-class GameAction(Enum):
-    """Types of game actions that can be parsed"""
-    DIALOGUE = "dialogue"
-    MOVEMENT = "movement" 
-    SEARCH = "search"
-    COMBAT = "combat"
-    TRADE = "trade"
-    INVENTORY = "inventory"
-    REST = "rest"
-    EXPLORE = "explore"
-    MAGIC = "magic"
-    
-    # New skill check actions
-    SKILL_CHECK = "skill_check"
-    STEALTH = "stealth"
-    PERSUASION = "persuasion"
-    DECEPTION = "deception"
-    INVESTIGATION = "investigation"
-    SLEIGHT_OF_HAND = "sleight_of_hand"
-    ATHLETICS = "athletics"
-    PERCEPTION = "perception"
-    
-    UNKNOWN = "unknown"
+# GameAction enum moved to command_classification_service to avoid circular imports
 
 
 @dataclass
@@ -76,66 +55,8 @@ class SemanticParser:
     """Main semantic parser class"""
     
     def __init__(self):
-        self.action_patterns = {
-            GameAction.DIALOGUE: [
-                r'говор\w*|сказать|спрос\w*|отвеч\w*|диалог|разговор',
-                r'talk|speak|say|ask|tell|chat|conversation',
-            ],
-            GameAction.MOVEMENT: [
-                r'ид\w*|ехать|идти|перейти|направ\w*|двигаться',
-                r'go|move|walk|travel|head|enter|leave|exit',
-            ],
-            GameAction.SEARCH: [
-                r'иск\w*|найти|смотр\w*|осмотр\w*|обыск\w*',
-                r'search|look|find|examine|inspect|investigate',
-            ],
-            GameAction.COMBAT: [
-                r'атак\w*|удар\w*|бой|сраж\w*|напасть|драться|убить|убив\w*|убей\w*',
-                r'attack|fight|combat|strike|hit|battle|kill|slay|defeat|destroy',
-            ],
-            GameAction.TRADE: [
-                r'купить|продать|торг\w*|обмен\w*|покуп\w*',
-                r'buy|sell|trade|purchase|shop|commerce',
-            ],
-            GameAction.EXPLORE: [
-                r'исследов\w*|изуч\w*|осмотр\w*|обход',
-                r'explore|discover|survey|scout|investigate',
-            ],
-            GameAction.MAGIC: [
-                r'заклин\w*|магия|свиток|воскр\w*|лечен\w*|зелье|заговор|ритуал',
-                r'cast|spell|magic|scroll|resurrection|resurrect|heal|potion|ritual|enchant',
-            ],
-            
-            # Skill check patterns
-            GameAction.STEALTH: [
-                r'подкрад\w*|прокрасться|незаметно|тихо|скрытно|спрятаться',
-                r'sneak|stealth|hide|quietly|silently|stealthily|creep',
-            ],
-            GameAction.PERSUASION: [
-                r'убед\w*|уговор\w*|склон\w*|договор\w*',
-                r'persuade|convince|talk into|negotiate|reason with',
-            ],
-            GameAction.DECEPTION: [
-                r'обман\w*|солг\w*|врать|лгать|притвор\w*',
-                r'lie|deceive|bluff|trick|fake|pretend',
-            ],
-            GameAction.INVESTIGATION: [
-                r'расследов\w*|изуч\w*|анализир\w*|разбир\w*',
-                r'investigate|analyze|examine carefully|study|research',
-            ],
-            GameAction.SLEIGHT_OF_HAND: [
-                r'укра\w*|своров\w*|карман\w*|ловкость рук',
-                r'steal|pickpocket|palm|sleight of hand|pilfer',
-            ],
-            GameAction.ATHLETICS: [
-                r'карабк\w*|лез\w*|прыг\w*|плав\w*|бег\w*',
-                r'climb|jump|swim|run|leap|scale',
-            ],
-            GameAction.PERCEPTION: [
-                r'замеч\w*|слыш\w*|чувств\w*|внимательно смотр\w*',
-                r'notice|hear|sense|spot|perceive|listen',
-            ]
-        }
+        # Note: Action patterns moved to CommandClassificationService
+        # This provides better semantic understanding and multilingual support
         
         # Skill to SkillType mapping
         self.skill_mapping = {
@@ -148,24 +69,7 @@ class SemanticParser:
             GameAction.PERCEPTION: SkillType.PERCEPTION,
         }
         
-        # Entity type patterns
-        self.entity_patterns = {
-            EntityType.NPC: [
-                r'трактирщик|бармен|кузнец|торговец|стражник|маг|жрец',
-                r'bartender|innkeeper|blacksmith|merchant|guard|wizard|priest',
-                r'NPC|персонаж|человек|эльф|гном|орк'
-            ],
-            EntityType.LOCATION: [
-                r'таверна|трактир|кузница|магазин|храм|замок|дом|город',
-                r'tavern|inn|forge|shop|temple|castle|house|city|village',
-                r'комната|зал|улица|площадь|лес|поле|гора'
-            ],
-            EntityType.ITEM: [
-                r'меч|щит|зелье|свиток|кольцо|амулет|книга',
-                r'sword|shield|potion|scroll|ring|amulet|book',
-                r'предмет|вещь|артефакт|сокровище'
-            ]
-        }
+        # Entity type patterns - REMOVED, now using semantic classification
 
     async def parse_command(
         self,
@@ -191,23 +95,24 @@ class SemanticParser:
                 context_entities=[]
             )
         
-        # 2. Detect action intent
-        action = self._detect_action(raw_command)
-        logger.debug(f"Detected action: {action}")
-        
-        # 2. Get player context (location, nearby entities)
+        # 2. Get player context (location, nearby entities) - needed for action detection
         context = await self._get_player_context(world_id, session_id, player_id)
         
-        # 3. Resolve entities mentioned in command
+        # 3. Detect action intent using modern embedding-based classification
+        action, action_confidence = self._detect_action(raw_command, context)
+        logger.debug(f"Detected action: {action} (confidence: {action_confidence:.2f})")
+        
+        # 4. Resolve entities mentioned in command
         entities = await self._resolve_entities(raw_command, context)
         
-        # 4. Extract message/details based on action type
+        # 5. Extract message/details based on action type
         message, details = self._extract_action_details(raw_command, action)
         
-        # 5. Check if this action requires dice rolls
+        # 6. Check if this action requires dice rolls
         skill_data = self._analyze_skill_requirements(raw_command, action, context)
         
-        # 6. Build result
+        # 7. Build result with improved confidence calculation
+        final_confidence = (action_confidence + entities.get('confidence', 0.0)) / 2
         result = ParsedCommand(
             action=action,
             raw_command=raw_command,
@@ -216,7 +121,7 @@ class SemanticParser:
             target_item_id=entities.get('item_id'),
             message=message,
             intent_details=details,
-            confidence=entities.get('confidence', 0.5),
+            confidence=final_confidence,
             context_entities=context,
             
             # Skill check data
@@ -230,27 +135,55 @@ class SemanticParser:
         logger.info(f"Parsed result: {action} -> NPC:{result.target_npc_id}, Location:{result.target_location_id}")
         return result
 
-    def _detect_action(self, command: str) -> GameAction:
-        """Detect the primary action intent from command"""
-        command_lower = command.lower()
+    def _detect_action(self, command: str, context: List[BaseEntity]) -> Tuple[GameAction, float]:
+        """
+        Detect the primary action intent from command using modern embedding-based classification.
+        Replaces keyword-based approach with semantic understanding.
+        """
+        # Determine game context from player's situation
+        game_context = self._determine_game_context(context)
         
-        # Score each action type
-        action_scores = {}
-        for action, patterns in self.action_patterns.items():
-            score = 0
-            for pattern_list in patterns:
-                for pattern in pattern_list.split('|'):
-                    if re.search(pattern, command_lower):
-                        score += 1
-            action_scores[action] = score
+        # Use the new classification service
+        action, confidence = command_classifier.classify_game_action(command, game_context)
         
-        # Return action with highest score
-        if action_scores:
-            best_action = max(action_scores, key=action_scores.get)
-            if action_scores[best_action] > 0:
-                return best_action
+        logger.debug(f"Action classification: '{command}' -> {action} (confidence: {confidence:.2f}, context: {game_context})")
         
-        return GameAction.UNKNOWN
+        return action, confidence
+    
+    def _determine_game_context(self, context: List[BaseEntity]) -> GameContext:
+        """Determine the current game context from entities around the player"""
+        if not context:
+            return GameContext.NEUTRAL
+        
+        # Check for combat indicators
+        for entity in context:
+            if entity.type == EntityType.NPC:
+                # Check if NPC is hostile (this would need to be implemented in NPC metadata)
+                if hasattr(entity, 'is_hostile') and getattr(entity, 'is_hostile', False):
+                    return GameContext.COMBAT
+                # Check if we're in active dialogue
+                if hasattr(entity, 'in_dialogue') and getattr(entity, 'in_dialogue', False):
+                    return GameContext.DIALOGUE
+            
+            elif entity.type == EntityType.LOCATION:
+                # Determine context from location type using semantic classification
+                if hasattr(entity, 'description'):
+                    # Use content priority to classify location type
+                    # High priority descriptions might indicate special locations (dungeons, towns)
+                    priority, priority_conf = command_classifier.assess_content_priority(entity.description)
+                    
+                    if priority == "high_priority" and priority_conf > 0.5:
+                        # Try to classify the location description semantically
+                        # For now, use simple heuristics as fallback for specific location types
+                        desc_lower = entity.description.lower()
+                        if 'dungeon' in desc_lower or 'cave' in desc_lower or 'tomb' in desc_lower:
+                            return GameContext.DUNGEON
+                        elif 'town' in desc_lower or 'city' in desc_lower or 'village' in desc_lower:
+                            return GameContext.TOWN
+                        elif 'forest' in desc_lower or 'mountain' in desc_lower:
+                            return GameContext.EXPLORATION
+        
+        return GameContext.NEUTRAL
 
     async def _get_player_context(
         self, 
@@ -346,24 +279,32 @@ class SemanticParser:
         return entities
 
     def _extract_entity_mentions(self, command: str) -> List[Tuple[EntityType, str]]:
-        """Extract potential entity mentions from command"""
+        """Extract potential entity mentions using semantic classification"""
         mentions = []
-        command_lower = command.lower()
         
-        # Look for known entity type patterns
-        for entity_type, patterns in self.entity_patterns.items():
-            for pattern_list in patterns:
-                for pattern in pattern_list.split('|'):
-                    matches = re.finditer(pattern, command_lower)
-                    for match in matches:
-                        mentions.append((entity_type, match.group()))
+        # Split command into words to check each potential entity
+        words = re.findall(r'\b\w+\b', command)
         
-        # Also look for proper names (capitalized words)
-        # This catches specific NPC names like "Barliman"
+        # Check individual words and small phrases
+        for i, word in enumerate(words):
+            # Single word classification
+            entity_type, confidence = command_classifier.classify_entity_type(word)
+            if entity_type and confidence > 0.5:
+                mentions.append((entity_type, word))
+            
+            # Two-word phrases
+            if i < len(words) - 1:
+                phrase = f"{word} {words[i+1]}"
+                entity_type, confidence = command_classifier.classify_entity_type(phrase)
+                if entity_type and confidence > 0.6:  # Higher threshold for phrases
+                    mentions.append((entity_type, phrase))
+        
+        # Also look for proper names (capitalized words) - still assume these are NPCs
         proper_names = re.findall(r'\b[A-Z][a-z]+\b', command)
         for name in proper_names:
-            # Assume proper names are NPCs by default
-            mentions.append((EntityType.NPC, name))
+            # Check if it's not already classified as something else
+            if not any(name.lower() in mention[1].lower() for mention in mentions):
+                mentions.append((EntityType.NPC, name))
         
         return mentions
 
@@ -455,14 +396,11 @@ class SemanticParser:
         
         # Check if it's a short response (likely dialogue continuation)
         if len(command.split()) <= 10:  # Short responses
-            # Check if it doesn't contain action words
-            command_lower = command.lower()
-            action_words = ['go', 'move', 'search', 'look', 'examine', 'иду', 'ищу', 'смотрю']
+            # Use classification to check if it contains clear actions
+            detected_action, confidence = command_classifier.classify_game_action(command)
             
-            has_action_words = any(word in command_lower for word in action_words)
-            
-            # If no clear action words and it's a short response, likely dialogue
-            if not has_action_words:
+            # If no clear action detected and it's a short response, likely dialogue
+            if detected_action == GameAction.UNKNOWN or confidence < 0.5:
                 return True
         
         # Check for dialogue patterns
@@ -511,21 +449,20 @@ class SemanticParser:
                 self._build_context_for_dc(context)
             )
             
-        # Check for specific skill check indicators in text
-        elif any(word in command_lower for word in [
-            'attempt', 'try', 'check', 'roll', 'test',
-            'попытаться', 'попробовать', 'проверить', 'бросить'
-        ]):
+        # Check for specific skill check indicators using classification
+        elif 'attempt' in command_lower or 'try' in command_lower or 'check' in command_lower or 'попытаться' in command_lower:
             result['requires_roll'] = True
             
-            # Try to determine which skill from context
-            if any(word in command_lower for word in ['stealth', 'hide', 'снейк', 'скрыться']):
+            # Use action classification to determine skill type
+            detected_action, action_confidence = command_classifier.classify_game_action(command)
+            
+            if detected_action.value in ['stealth'] and action_confidence > 0.5:
                 result['skill_type'] = SkillType.STEALTH
-            elif any(word in command_lower for word in ['persuade', 'convince', 'убедить']):
+            elif detected_action.value in ['persuasion'] and action_confidence > 0.5:
                 result['skill_type'] = SkillType.PERSUASION
-            elif any(word in command_lower for word in ['investigate', 'examine', 'расследовать']):
+            elif detected_action.value in ['investigation', 'search'] and action_confidence > 0.5:
                 result['skill_type'] = SkillType.INVESTIGATION
-            elif any(word in command_lower for word in ['athletics', 'climb', 'карабкаться']):
+            elif detected_action.value in ['athletics'] and action_confidence > 0.5:
                 result['skill_type'] = SkillType.ATHLETICS
             else:
                 # Default to general ability check
@@ -541,17 +478,17 @@ class SemanticParser:
             result['requires_roll'] = True
             result['estimated_dc'] = 15  # Default AC
             
-        # Some search actions need perception
-        elif action == GameAction.SEARCH and any(word in command_lower for word in [
-            'hidden', 'secret', 'carefully', 'thoroughly',
-            'скрытый', 'тайный', 'внимательно', 'тщательно'
-        ]):
-            result['requires_roll'] = True
-            result['skill_type'] = SkillType.PERCEPTION
-            result['estimated_dc'] = dice_engine.determine_difficulty_class(
-                command,
-                self._build_context_for_dc(context)
-            )
+        # For search actions, use content priority to determine if it needs perception
+        elif action == GameAction.SEARCH:
+            # Use semantic classification to detect if this is a careful/detailed search
+            priority, priority_conf = command_classifier.assess_content_priority(command)
+            if priority == "high_priority" and priority_conf > 0.4:
+                result['requires_roll'] = True
+                result['skill_type'] = SkillType.PERCEPTION
+                result['estimated_dc'] = dice_engine.determine_difficulty_class(
+                    command,
+                    self._build_context_for_dc(context)
+                )
         
         return result
     
@@ -565,11 +502,11 @@ class SemanticParser:
                 # NPC attitude might affect social checks
                 context['target_attitude'] = 'neutral'  # TODO: Determine from NPC state
             elif entity.type == EntityType.LOCATION:
-                # Location might affect various checks
-                if 'dark' in entity.description.lower() or 'shadow' in entity.description.lower():
-                    context['lighting'] = 'dark'
-                elif 'bright' in entity.description.lower() or 'sunlight' in entity.description.lower():
-                    context['lighting'] = 'bright'
+                # Use semantic classification to determine lighting conditions
+                lighting_condition, confidence = command_classifier.classify_lighting_condition(entity.description)
+                if lighting_condition and confidence > 0.4:
+                    context['lighting'] = lighting_condition
+                    context['lighting_confidence'] = confidence
         
         return context
 

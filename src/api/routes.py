@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from api.ai_routes import router as ai_router
 from api.game_routes import router as game_router
+from api.streaming_routes import router as streaming_router
 from core.world_service import world_service
 from infrastructure.cache_service import cache_service
 from domain.entities import (
@@ -25,6 +26,9 @@ router.include_router(ai_router)
 
 # Include Natural Language Game routes
 router.include_router(game_router)
+
+# Include Streaming routes for real-time responses
+router.include_router(streaming_router)
 
 
 # Request/Response models
