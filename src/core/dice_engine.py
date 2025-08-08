@@ -333,6 +333,10 @@ class DiceEngine:
         # Context modifiers
         base_dc = DifficultyClass.MEDIUM  # Default to DC 15
         
+        # Analyze action urgency for DC modification
+        urgency, urgency_conf = command_classifier.classify_action_urgency(action_description)
+        urgency_modifier = 0
+        
         # Stealth actions - check using modern classification
         detected_action, action_conf = command_classifier.classify_game_action(action_description)
         if detected_action.value == 'stealth' and action_conf > 0.5:
@@ -366,7 +370,18 @@ class DiceEngine:
         elif detected_action.value == 'magic' and action_conf > 0.5:
             base_dc = DifficultyClass.MEDIUM  # DC 15
             
-        return max(5, min(30, base_dc))  # Clamp between 5 and 30
+        # Apply urgency modifier based on action type and urgency level
+        urgency_modifier = 0
+        if urgency and urgency_conf > 0.3:
+            urgency_modifier = command_classifier.calculate_urgency_dc_modifier(
+                urgency, detected_action.value
+            )
+            logger.debug(f"Action urgency: {urgency} (conf: {urgency_conf:.2f}) -> DC modifier: {urgency_modifier:+d}")
+            
+        # Apply urgency modifier to final DC
+        final_dc = base_dc + urgency_modifier
+            
+        return max(5, min(30, final_dc))  # Clamp between 5 and 30
     
     def resolve_complex_action(
         self,

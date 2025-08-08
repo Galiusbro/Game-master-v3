@@ -210,26 +210,49 @@ def analyze_response_quality(content, quality_indicators):
     elif len(content) > 50:
         score += 0.5
     
-    # Indicator presence
-    indicators_found = 0
-    for indicator in quality_indicators:
-        if indicator.lower() in content_lower:
-            indicators_found += 1
-    
-    # Score based on indicator coverage
-    if len(quality_indicators) > 0:
-        indicator_ratio = indicators_found / len(quality_indicators)
-        score += indicator_ratio * 2.0
-    
-    # Narrative quality markers
-    quality_markers = [
-        "you see", "you notice", "you observe", "you feel",
-        "carefully", "ancient", "mysterious", "magical",
-        "detailed", "intricate", "complex", "subtle"
-    ]
-    
-    markers_found = sum(1 for marker in quality_markers if marker in content_lower)
-    score += min(markers_found * 0.1, 1.0)
+    # Use semantic content quality analysis instead of keyword matching
+    try:
+        import sys
+        sys.path.append('src')
+        from infrastructure.command_classification_service import command_classifier
+        
+        quality_level, quality_conf = command_classifier.analyze_content_quality(content)
+        
+        # Convert semantic quality to numeric score
+        quality_scores = {
+            "excellent_quality": 4.0,
+            "high_quality": 3.0, 
+            "medium_quality": 2.0,
+            "low_quality": 1.0
+        }
+        
+        semantic_score = quality_scores.get(quality_level, 2.0) * quality_conf
+        score += semantic_score
+        
+    except Exception as e:
+        # Fallback to old keyword-based method if semantic analysis fails
+        print(f"⚠️ Semantic quality analysis failed, using fallback: {e}")
+        
+        # Indicator presence
+        indicators_found = 0
+        for indicator in quality_indicators:
+            if indicator.lower() in content_lower:
+                indicators_found += 1
+        
+        # Score based on indicator coverage
+        if len(quality_indicators) > 0:
+            indicator_ratio = indicators_found / len(quality_indicators)
+            score += indicator_ratio * 2.0
+        
+        # Narrative quality markers
+        quality_markers = [
+            "you see", "you notice", "you observe", "you feel",
+            "carefully", "ancient", "mysterious", "magical",
+            "detailed", "intricate", "complex", "subtle"
+        ]
+        
+        markers_found = sum(1 for marker in quality_markers if marker in content_lower)
+        score += min(markers_found * 0.1, 1.0)
     
     # Cap at 5.0
     return min(score, 5.0)

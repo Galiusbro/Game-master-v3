@@ -166,22 +166,23 @@ class SemanticParser:
                     return GameContext.DIALOGUE
             
             elif entity.type == EntityType.LOCATION:
-                # Determine context from location type using semantic classification
+                # Use semantic classification to determine location type and context
                 if hasattr(entity, 'description'):
-                    # Use content priority to classify location type
-                    # High priority descriptions might indicate special locations (dungeons, towns)
-                    priority, priority_conf = command_classifier.assess_content_priority(entity.description)
+                    location_type, location_conf = command_classifier.classify_location_type(entity.description)
                     
-                    if priority == "high_priority" and priority_conf > 0.5:
-                        # Try to classify the location description semantically
-                        # For now, use simple heuristics as fallback for specific location types
-                        desc_lower = entity.description.lower()
-                        if 'dungeon' in desc_lower or 'cave' in desc_lower or 'tomb' in desc_lower:
+                    if location_type and location_conf > 0.4:
+                        # Map location types to game contexts
+                        if location_type == "dungeon":
                             return GameContext.DUNGEON
-                        elif 'town' in desc_lower or 'city' in desc_lower or 'village' in desc_lower:
+                        elif location_type == "town":
                             return GameContext.TOWN
-                        elif 'forest' in desc_lower or 'mountain' in desc_lower:
+                        elif location_type in ["wilderness", "outdoor"]:
                             return GameContext.EXPLORATION
+                        elif location_type == "underground":
+                            return GameContext.DUNGEON  # Underground areas are usually dungeon-like
+                        elif location_type == "magical_realm":
+                            return GameContext.EXPLORATION  # Magical realms are exploration areas
+                        # Indoor locations keep neutral context
         
         return GameContext.NEUTRAL
 
@@ -206,17 +207,26 @@ class SemanticParser:
             context_entities = [player]
             
             # Get player's location
-            if hasattr(player, 'current_location_id') and player.current_location_id:
-                location = await world_service.get_entity(player.current_location_id, EntityType.LOCATION)
+            try:
+                current_loc_id = getattr(player, 'current_location_id', None)
+            except Exception:
+                current_loc_id = None
+
+            if current_loc_id:
+                location = await world_service.get_entity(current_loc_id, EntityType.LOCATION)
                 if location:
                     context_entities.append(location)
                     
                     # Get entities in the same location
-                    nearby = await world_service.get_entity_context(
-                        entity_id=player.current_location_id,
-                        max_depth=1,
-                        entity_types=[EntityType.NPC, EntityType.ITEM]
-                    )
+                    try:
+                        nearby = await world_service.get_entity_context(
+                            entity_id=current_loc_id,
+                            max_depth=1,
+                            entity_types=[EntityType.NPC, EntityType.ITEM]
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to get location neighbors: {e}")
+                        nearby = []
                     context_entities.extend(nearby)
             
             logger.debug(f"Context entities: {len(context_entities)}")
@@ -499,8 +509,16 @@ class SemanticParser:
         # Analyze entities to determine difficulty modifiers
         for entity in entities:
             if entity.type == EntityType.NPC:
-                # NPC attitude might affect social checks
-                context['target_attitude'] = 'neutral'  # TODO: Determine from NPC state
+                # Use semantic classification to determine NPC attitude
+                if hasattr(entity, 'description'):
+                    attitude, attitude_conf = command_classifier.classify_npc_attitude(entity.description)
+                    if attitude and attitude_conf > 0.3:
+                        context['target_attitude'] = attitude
+                        context['attitude_confidence'] = attitude_conf
+                    else:
+                        context['target_attitude'] = 'neutral'  # Fallback to neutral
+                else:
+                    context['target_attitude'] = 'neutral'  # No description available
             elif entity.type == EntityType.LOCATION:
                 # Use semantic classification to determine lighting conditions
                 lighting_condition, confidence = command_classifier.classify_lighting_condition(entity.description)

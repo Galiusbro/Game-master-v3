@@ -331,8 +331,22 @@ class NPCState(BaseModel):
     current_mood: str = "neutral"
     current_activity: str = "idle"
     relationship_to_player: Dict[UUID, str] = Field(default_factory=dict)  # player_id -> relationship
+    # Social systems
+    disposition_to_player: Dict[UUID, int] = Field(default_factory=dict)  # player_id -> [-100..100]
+    social_cooldowns: Dict[UUID, str] = Field(default_factory=dict)  # player_id -> ISO timestamp string
     recent_events: List[UUID] = Field(default_factory=list)  # Recent event IDs
     current_location_id: Optional[UUID] = None
+
+    def compute_relationship_for_player(self, player_id: UUID) -> str:
+        """Derive relationship label for a player from disposition if explicit label not set."""
+        if player_id in self.relationship_to_player:
+            return self.relationship_to_player[player_id]
+        score = self.disposition_to_player.get(player_id, 0)
+        if score >= 50:
+            return "friendly"
+        if score <= -50:
+            return "hostile"
+        return "neutral"
 
 
 class NPC(BaseEntity):

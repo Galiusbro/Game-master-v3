@@ -1,0 +1,810 @@
+[
+  {
+    "entity": {
+      "id": "c7245a74-7032-485b-b04f-8e2dc436890b",
+      "type": "npc",
+      "name": "Test Boss",
+      "description": "A simple test boss",
+      "metadata": {},
+      "created_at": "2025-08-07T20:05:53.468330",
+      "updated_at": "2025-08-07T20:05:53.468368",
+      "personality": {
+        "core_traits": [
+          "aggressive",
+          "proud"
+        ],
+        "speech_patterns": [
+          "speaks with authority"
+        ],
+        "likes": [
+          "combat",
+          "power"
+        ],
+        "dislikes": [
+          "weakness",
+          "cowards"
+        ],
+        "fears": [
+          "losing"
+        ],
+        "goals": [
+          "dominate"
+        ],
+        "backstory": "A powerful warrior who seeks to test his strength",
+        "example_phrases": [
+          "You dare challenge me?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "confident",
+        "current_activity": "waiting for challengers",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": null
+      },
+      "is_alive": true,
+      "importance_level": 8
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "89a1ef17-e9c2-4e73-99bf-ee8db897a649",
+      "type": "npc",
+      "name": "Test Boss",
+      "description": "A simple test boss",
+      "metadata": {},
+      "created_at": "2025-08-07T20:00:37.820387",
+      "updated_at": "2025-08-07T20:00:37.820394",
+      "personality": {
+        "core_traits": [
+          "aggressive",
+          "proud"
+        ],
+        "speech_patterns": [
+          "speaks with authority"
+        ],
+        "likes": [
+          "combat",
+          "power"
+        ],
+        "dislikes": [
+          "weakness",
+          "cowards"
+        ],
+        "fears": [
+          "losing"
+        ],
+        "goals": [
+          "dominate"
+        ],
+        "backstory": "A powerful warrior who seeks to test his strength",
+        "example_phrases": [
+          "You dare challenge me?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "confident",
+        "current_activity": "waiting for challengers",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": null
+      },
+      "is_alive": true,
+      "importance_level": 8
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "58a43749-9cbf-4ab6-896e-64076c8c62b8",
+      "type": "npc",
+      "name": "Test Boss",
+      "description": "A simple test boss",
+      "metadata": {},
+      "created_at": "2025-08-07T19:58:36.295676",
+      "updated_at": "2025-08-07T19:58:36.295684",
+      "personality": {
+        "core_traits": [
+          "aggressive",
+          "proud"
+        ],
+        "speech_patterns": [
+          "speaks with authority"
+        ],
+        "likes": [
+          "combat",
+          "power"
+        ],
+        "dislikes": [
+          "weakness",
+          "cowards"
+        ],
+        "fears": [
+          "losing"
+        ],
+        "goals": [
+          "dominate"
+        ],
+        "backstory": "A powerful warrior who seeks to test his strength",
+        "example_phrases": [
+          "You dare challenge me?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "confident",
+        "current_activity": "waiting for challengers",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": null
+      },
+      "is_alive": true,
+      "importance_level": 8
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "132ebfa8-8926-44c7-a820-96d40ecdcc17",
+      "type": "npc",
+      "name": "Test Boss",
+      "description": "A simple test boss",
+      "metadata": {},
+      "created_at": "2025-08-07T19:51:20.254413",
+      "updated_at": "2025-08-07T19:51:20.254473",
+      "personality": {
+        "core_traits": [
+          "aggressive",
+          "proud"
+        ],
+        "speech_patterns": [
+          "speaks with authority"
+        ],
+        "likes": [
+          "combat",
+          "power"
+        ],
+        "dislikes": [
+          "weakness",
+          "cowards"
+        ],
+        "fears": [
+          "losing"
+        ],
+        "goals": [
+          "dominate"
+        ],
+        "backstory": "A powerful warrior who seeks to test his strength",
+        "example_phrases": [
+          "You dare challenge me?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "confident",
+        "current_activity": "waiting for challengers",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": null
+      },
+      "is_alive": true,
+      "importance_level": 8
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "a50bb637-84ab-4a16-9e66-ca66bf21ecbb",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-06T14:48:13.076904",
+      "updated_at": "2025-08-06T14:48:13.076921",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "7783b150-b0e3-42fe-838f-3fbe3e5ec9f6"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "fdc3cd74-a8b1-420b-9c2e-c072623ab9e2",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-05T18:47:33.406521",
+      "updated_at": "2025-08-05T18:47:33.406524",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "9a6b326c-5c6e-4c42-b0fc-7b7b5e0c161f"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "23682530-fe94-4251-ae2e-70f41edffd4d",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-05T18:04:03.930052",
+      "updated_at": "2025-08-05T18:04:03.930059",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "245b6140-8975-4d33-ac2d-b318d4fe4880"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "61669090-fdbf-49b8-acc3-5d2973b9a05c",
+      "type": "npc",
+      "name": "Mysterious Traveler",
+      "description": "A cloaked figure with piercing eyes and an air of mystery.",
+      "metadata": {},
+      "created_at": "2025-08-05T14:27:23.067495",
+      "updated_at": "2025-08-05T14:27:23.067504",
+      "personality": {
+        "core_traits": [
+          "mysterious",
+          "wise",
+          "cryptic"
+        ],
+        "speech_patterns": [
+          "speaks in riddles",
+          "uses archaic words"
+        ],
+        "likes": [
+          "ancient lore",
+          "starlight",
+          "quiet conversations"
+        ],
+        "dislikes": [
+          "crowds",
+          "loud noises",
+          "direct questions"
+        ],
+        "fears": [
+          "being discovered",
+          "bright light"
+        ],
+        "goals": [
+          "share wisdom",
+          "find the chosen one"
+        ],
+        "backstory": "An ancient being who has wandered the world for centuries.",
+        "example_phrases": [
+          "The stars whisper secrets to those who listen...",
+          "Time flows differently for those who understand its nature.",
+          "Seek not what you wish to find, but what needs to be found."
+        ]
+      },
+      "current_state": {
+        "current_mood": "contemplative",
+        "current_activity": "observing",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": null
+      },
+      "is_alive": true,
+      "importance_level": 5
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "4eb1fc14-2d7f-4961-8bdc-7bc395ab160d",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-05T14:01:13.572027",
+      "updated_at": "2025-08-05T14:01:13.572030",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "8d41db4c-5016-4ecf-a274-c208d698f485"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "acd65e5a-f104-4b49-8998-31197ff29319",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-05T14:00:06.941445",
+      "updated_at": "2025-08-05T14:00:06.941449",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "52ce1948-c842-422a-bd22-79a361c22513"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "ab0df806-c714-4a8b-a75f-b2cb9d18e70d",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-05T13:58:36.944559",
+      "updated_at": "2025-08-05T13:58:36.944561",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "a0c58086-11cd-4ea5-9e67-4bf976ac9060"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "9e81fefa-bb6a-43fe-8645-771033bd1cbd",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-05T13:53:54.299381",
+      "updated_at": "2025-08-05T13:53:54.299385",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "d7f8c11f-78ea-4ffe-af66-8c1ae8775496"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "d7d0cdfd-4a3d-4757-9cb5-491759226030",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-05T13:51:11.032559",
+      "updated_at": "2025-08-05T13:51:11.032562",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "b95d404c-e00e-4d9d-8e8d-54bbd292b0e4"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "6ab67a3b-dc52-4e2a-8c20-6d6c7a7565f6",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. His hands are always busy, either serving drinks or cleaning.",
+      "metadata": {},
+      "created_at": "2025-08-05T13:47:23.339867",
+      "updated_at": "2025-08-05T13:47:23.339881",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "content",
+        "current_activity": "cleaning glasses",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "6e151fd9-8d17-42c1-bdcb-1e8092511aa7"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  },
+  {
+    "entity": {
+      "id": "76afb2a3-894b-4d64-b430-2eb3c2aff980",
+      "type": "npc",
+      "name": "Barliman Butterbur",
+      "description": "A stout, cheerful man with graying hair and a welcoming smile. He looks slightly bewildered but very much alive, with a faint glow still lingering around him from recent magical revival.",
+      "metadata": {},
+      "created_at": "2025-08-05T13:49:12.219675",
+      "updated_at": "2025-08-05T13:49:12.219678",
+      "personality": {
+        "core_traits": [
+          "friendly",
+          "observant",
+          "discreet"
+        ],
+        "speech_patterns": [
+          "speaks with a slight accent",
+          "often hums while working"
+        ],
+        "likes": [
+          "good stories",
+          "honest customers",
+          "quiet evenings"
+        ],
+        "dislikes": [
+          "troublemakers",
+          "unpaid tabs",
+          "loud arguments"
+        ],
+        "fears": [
+          "losing his tavern",
+          "bandits"
+        ],
+        "goals": [
+          "keep the tavern profitable",
+          "help travelers"
+        ],
+        "backstory": "Former adventurer who settled down to run this tavern after an injury ended his traveling days.",
+        "example_phrases": [
+          "Welcome to the Prancing Pony, friend!",
+          "What can I get you to drink?",
+          "Heard any interesting tales on the road?"
+        ]
+      },
+      "current_state": {
+        "current_mood": "confused but grateful",
+        "current_activity": "slowly awakening",
+        "relationship_to_player": {},
+        "recent_events": [],
+        "current_location_id": "07b9cc05-b319-45d6-995e-8ed2d154996a"
+      },
+      "is_alive": true,
+      "importance_level": 3
+    },
+    "entity_type": "npc"
+  }
+]

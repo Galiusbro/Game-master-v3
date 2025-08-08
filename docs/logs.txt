@@ -1,0 +1,567 @@
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 27.23it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 22.49it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 22.07it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 37.65it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 29.32it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 22.24it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.37it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 45.48it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 27.80it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 19.03it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 19.60it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 47.27it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 28.47it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.49it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 23.14it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 54.84it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 31.29it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 22.11it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 23.79it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 50.31it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 30.56it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.74it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 19.84it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 56.46it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 29.13it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.19it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.61it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 55.22it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 30.21it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 12.69it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00,  8.34it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 17.78it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 12.69it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00,  8.72it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 18.32it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 22.60it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 22.81it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 26.23it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 26.73it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 25.64it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 24.88it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 24.15it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.74it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 31.08it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 22.63it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 20.31it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.62it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 34.35it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 27.28it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 24.01it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 25.22it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 42.35it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 34.41it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 24.66it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 23.84it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 55.31it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 29.72it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 18.62it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 19.75it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 24.03it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 14.44it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 18.77it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 20.81it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 33.22it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 27.59it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.62it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 17.80it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 15.10it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 10.72it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 19.48it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 20.99it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 23.17it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.27it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 23.95it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 22.16it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 24.43it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.74it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 25.82it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 24.01it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 30.35it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 27.10it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 23.07it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 22.00it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 31.81it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 24.44it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.78it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.58it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 31.76it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 28.57it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 21.20it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00,  9.01it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 20.30it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 18.25it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 23.00it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 24.13it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 24.49it/s]
+2025-08-08 00:05:44,705 - core.semantic_parser - INFO - Extracted mentions from 'I use all my charisma to try to convince the ancient dragon to spare my life': [(<EntityType.ITEM: 'item'>, 'to'), (<EntityType.ITEM: 'item'>, 'to'), (<EntityType.ITEM: 'item'>, 'the'), (<EntityType.LOCATION: 'location'>, 'the ancient'), (<EntityType.LOCATION: 'location'>, 'ancient'), (<EntityType.NPC: 'npc'>, 'ancient dragon'), (<EntityType.NPC: 'npc'>, 'dragon'), (<EntityType.NPC: 'npc'>, 'dragon to'), (<EntityType.ITEM: 'item'>, 'to')]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 49.57it/s]
+2025-08-08 00:05:44,794 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:44,799 - core.semantic_parser - WARNING - No item found for 'to'
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 34.45it/s]
+2025-08-08 00:05:44,842 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:44,843 - core.semantic_parser - WARNING - No item found for 'to'
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 46.22it/s]
+2025-08-08 00:05:44,878 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:44,880 - core.semantic_parser - INFO - Found item via vector search: Mug of Ale (54ca2804-029b-4a3c-ba9b-9d484d7fc690) score=0.03917801
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 41.79it/s]
+2025-08-08 00:05:44,921 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:44,922 - core.semantic_parser - INFO - Found location via vector search: The Prancing Pony (7783b150-b0e3-42fe-838f-3fbe3e5ec9f6) score=0.13757206
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 23.77it/s]
+2025-08-08 00:05:44,978 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:44,979 - core.semantic_parser - INFO - Found location via vector search: The Prancing Pony (7783b150-b0e3-42fe-838f-3fbe3e5ec9f6) score=0.14602864
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 21.81it/s]
+2025-08-08 00:05:45,044 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:45,046 - core.semantic_parser - INFO - Found npc via vector search: Barliman Butterbur (76afb2a3-894b-4d64-b430-2eb3c2aff980) score=0.17997862
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 30.99it/s]
+2025-08-08 00:05:45,106 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:45,108 - core.semantic_parser - INFO - Found npc via vector search: Barliman Butterbur (a50bb637-84ab-4a16-9e66-ca66bf21ecbb) score=0.22660112
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 41.47it/s]
+2025-08-08 00:05:45,143 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:45,144 - core.semantic_parser - INFO - Found npc via vector search: Barliman Butterbur (76afb2a3-894b-4d64-b430-2eb3c2aff980) score=0.1458708
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 46.89it/s]
+2025-08-08 00:05:45,175 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:45,176 - core.semantic_parser - WARNING - No item found for 'to'
+2025-08-08 00:05:45,176 - core.semantic_parser - INFO - Final resolved entities: {'confidence': 0.437614625, 'item_id': UUID('54ca2804-029b-4a3c-ba9b-9d484d7fc690'), 'location_id': UUID('7783b150-b0e3-42fe-838f-3fbe3e5ec9f6'), 'npc_id': UUID('76afb2a3-894b-4d64-b430-2eb3c2aff980')}
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 21.90it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 25.05it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 30.97it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 37.16it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 33.59it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 27.69it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 27.06it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 20.72it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 20.13it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 18.47it/s]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 11.75it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 12.46it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 14.50it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  8.81it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 21.34it/s]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 13.45it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 17.41it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 17.07it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 14.42it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  8.26it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 16.78it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  8.92it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 12.55it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 20.79it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 33.38it/s]
+2025-08-08 00:05:46,815 - core.semantic_parser - INFO - Parsed result: GameAction.COMBAT -> NPC:76afb2a3-894b-4d64-b430-2eb3c2aff980, Location:7783b150-b0e3-42fe-838f-3fbe3e5ec9f6
+2025-08-08 00:05:46,816 - api.game_routes - INFO - Parsed action: GameAction.COMBAT, confidence: 0.44262343645095825
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  6.49it/s]
+INFO:     127.0.0.1:62132 - "GET /metrics HTTP/1.1" 200 OK
+2025-08-08 00:05:47,022 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:05:47,065 - core.context_builder - INFO - Context built: 11/11 entities, ~509 tokens, 0.238s
+2025-08-08 00:05:47,065 - infrastructure.ai_service - INFO - Building world context with 11 entities:
+2025-08-08 00:05:47,065 - infrastructure.ai_service - INFO - Final context length: 1429 chars, 11 entities
+2025-08-08 00:05:47,072 - infrastructure.ai_service - INFO - World description tokens - Total: 728, System: 222, User: 506
+2025-08-08 00:06:01,269 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  1.92it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 35.69it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 48.76it/s]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 49.94it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 51.34it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 13.75it/s]
+INFO:     127.0.0.1:62122 - "POST /api/v1/game/command HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62162 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62184 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62317 - "GET /metrics HTTP/1.1" 200 OK
+2025-08-08 00:07:16,560 - watchfiles.main - INFO - 1 change detected
+WARNING:  WatchFiles detected changes in 'api/streaming_routes.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2025-08-08 00:07:16,783 - main - INFO - Shutting down services...
+2025-08-08 00:07:16,797 - infrastructure.vector_db - INFO - Disconnected from Qdrant
+2025-08-08 00:07:16,824 - infrastructure.graph_db - INFO - Disconnected from Neo4j
+2025-08-08 00:07:16,871 - core.event_sourcing - INFO - Disconnected from Event Store
+2025-08-08 00:07:16,871 - core.world_service - INFO - World Service shutdown complete
+2025-08-08 00:07:16,872 - main - INFO - Shutdown complete
+INFO:     Application shutdown complete.
+INFO:     Finished server process [20036]
+Loaded environment variables from /Users/as/projects/ayaal/game-master/game_master_v3/.env
+✅ OpenAI API key found
+Loaded environment variables from /Users/as/projects/ayaal/game-master/game_master_v3/.env
+✅ OpenAI API key found
+2025-08-08 00:07:25,202 - watchfiles.main - INFO - 3 changes detected
+INFO:     Started server process [33929]
+INFO:     Waiting for application startup.
+2025-08-08 00:07:25,206 - main - INFO - Starting Game Master V3 v3.0.0
+2025-08-08 00:07:25,325 - httpx - INFO - HTTP Request: GET http://localhost:6333 "HTTP/1.1 200 OK"
+/Users/as/projects/ayaal/game-master/game_master_v3/src/infrastructure/vector_db.py:35: UserWarning: Qdrant client version 1.15.1 is incompatible with server version 1.7.3. Major versions should match and minor version difference must not exceed 1. Set check_compatibility=False to skip version check.
+  self.client = AsyncQdrantClient(
+2025-08-08 00:07:25,406 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: mps
+2025-08-08 00:07:25,406 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: all-MiniLM-L6-v2
+2025-08-08 00:07:30,850 - httpx - INFO - HTTP Request: GET http://localhost:6333/collections "HTTP/1.1 200 OK"
+2025-08-08 00:07:30,856 - infrastructure.vector_db - INFO - Using existing Qdrant collection: gamemaster_world
+2025-08-08 00:07:30,856 - infrastructure.vector_db - INFO - Connected to Qdrant at localhost:6333
+2025-08-08 00:07:30,966 INFO sqlalchemy.engine.Engine select pg_catalog.version()
+2025-08-08 00:07:30,966 - sqlalchemy.engine.Engine - INFO - select pg_catalog.version()
+2025-08-08 00:07:30,966 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-08-08 00:07:30,966 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-08-08 00:07:30,969 - infrastructure.cache_service - INFO - Connected to Redis at redis://localhost:6379/0
+2025-08-08 00:07:30,972 INFO sqlalchemy.engine.Engine select current_schema()
+2025-08-08 00:07:30,972 - sqlalchemy.engine.Engine - INFO - select current_schema()
+2025-08-08 00:07:30,972 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-08-08 00:07:30,972 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-08-08 00:07:30,978 INFO sqlalchemy.engine.Engine show standard_conforming_strings
+2025-08-08 00:07:30,978 - sqlalchemy.engine.Engine - INFO - show standard_conforming_strings
+2025-08-08 00:07:30,978 INFO sqlalchemy.engine.Engine [raw sql] ()
+2025-08-08 00:07:30,978 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2025-08-08 00:07:30,982 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-08-08 00:07:30,982 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-08-08 00:07:30,989 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-08 00:07:30,989 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-08 00:07:30,989 INFO sqlalchemy.engine.Engine [generated in 0.00030s] ('event_log', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-08 00:07:30,989 - sqlalchemy.engine.Engine - INFO - [generated in 0.00030s] ('event_log', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-08 00:07:31,017 INFO sqlalchemy.engine.Engine SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-08 00:07:31,017 - sqlalchemy.engine.Engine - INFO - SELECT pg_catalog.pg_class.relname 
+FROM pg_catalog.pg_class JOIN pg_catalog.pg_namespace ON pg_catalog.pg_namespace.oid = pg_catalog.pg_class.relnamespace 
+WHERE pg_catalog.pg_class.relname = $1::VARCHAR AND pg_catalog.pg_class.relkind = ANY (ARRAY[$2::VARCHAR, $3::VARCHAR, $4::VARCHAR, $5::VARCHAR, $6::VARCHAR]) AND pg_catalog.pg_table_is_visible(pg_catalog.pg_class.oid) AND pg_catalog.pg_namespace.nspname != $7::VARCHAR
+2025-08-08 00:07:31,018 INFO sqlalchemy.engine.Engine [cached since 0.02897s ago] ('world_snapshots', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-08 00:07:31,018 - sqlalchemy.engine.Engine - INFO - [cached since 0.02897s ago] ('world_snapshots', 'r', 'p', 'f', 'v', 'm', 'pg_catalog')
+2025-08-08 00:07:31,020 INFO sqlalchemy.engine.Engine COMMIT
+2025-08-08 00:07:31,020 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-08-08 00:07:31,022 - core.event_sourcing - INFO - Connected to Event Store (PostgreSQL)
+2025-08-08 00:07:31,063 - infrastructure.graph_db - INFO - Connected to Neo4j at bolt://localhost:7687
+2025-08-08 00:07:31,444 - infrastructure.ai_service - INFO - AI Service cache integration enabled
+2025-08-08 00:07:32,407 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-08 00:07:32,421 - infrastructure.ai_service - INFO - OpenAI API connection successful
+2025-08-08 00:07:32,421 - infrastructure.ai_service - INFO - AI Service initialized successfully
+2025-08-08 00:07:32,422 - core.world_service - INFO - AI Service initialized successfully
+2025-08-08 00:07:32,422 - core.world_service - INFO - World Service initialized successfully
+2025-08-08 00:07:32,422 - main - INFO - All services initialized successfully
+INFO:     Application startup complete.
+INFO:     127.0.0.1:62465 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62667 - "GET /metrics HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62732 - "GET /metrics HTTP/1.1" 200 OK
+2025-08-08 00:08:54,955 - infrastructure.graph_db - INFO - Created EntityType.PLAYER entity: f410b828-d5e2-4798-847f-a67c339e6fcf
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  1.30it/s]
+2025-08-08 00:08:55,772 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/gamemaster_world/points?wait=true "HTTP/1.1 200 OK"
+2025-08-08 00:08:55,783 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-08-08 00:08:55,783 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-08-08 00:08:55,785 INFO sqlalchemy.engine.Engine INSERT INTO event_log (id, timestamp, event_id, entity_type, entity_id, action_type, actor_type, actor_id, before_state, after_state, session_id, confidence_score, rollback_data) VALUES ($1::UUID, $2::TIMESTAMP WITHOUT TIME ZONE, $3::UUID, $4::VARCHAR, $5::UUID, $6::VARCHAR, $7::VARCHAR, $8::UUID, $9::JSONB, $10::JSONB, $11::UUID, $12::FLOAT, $13::JSONB)
+2025-08-08 00:08:55,785 - sqlalchemy.engine.Engine - INFO - INSERT INTO event_log (id, timestamp, event_id, entity_type, entity_id, action_type, actor_type, actor_id, before_state, after_state, session_id, confidence_score, rollback_data) VALUES ($1::UUID, $2::TIMESTAMP WITHOUT TIME ZONE, $3::UUID, $4::VARCHAR, $5::UUID, $6::VARCHAR, $7::VARCHAR, $8::UUID, $9::JSONB, $10::JSONB, $11::UUID, $12::FLOAT, $13::JSONB)
+2025-08-08 00:08:55,785 INFO sqlalchemy.engine.Engine [generated in 0.00032s] (UUID('13f5d8ae-dc50-4de2-a024-a2107af9bfe3'), datetime.datetime(2025, 8, 7, 17, 8, 55, 774253), UUID('36105529-df55-4919-8338-7e14804e430c'), 'player', UUID('f410b828-d5e2-4798-847f-a67c339e6fcf'), 'world_change', 'system', UUID('f410b828-d5e2-4798-847f-a67c339e6fcf'), '{}', '{"id": "f410b828-d5e2-4798-847f-a67c339e6fcf", "type": "player", "name": "Valiant the Diceroller", "description": "A level 1 paladin", "metadata": {} ... (815 characters truncated) ... 100, "inventory": [], "active_quests": [], "completed_quests": [], "known_npcs": [], "known_locations": [], "personal_notes": {}, "recent_rolls": []}', None, 1.0, 'null')
+2025-08-08 00:08:55,785 - sqlalchemy.engine.Engine - INFO - [generated in 0.00032s] (UUID('13f5d8ae-dc50-4de2-a024-a2107af9bfe3'), datetime.datetime(2025, 8, 7, 17, 8, 55, 774253), UUID('36105529-df55-4919-8338-7e14804e430c'), 'player', UUID('f410b828-d5e2-4798-847f-a67c339e6fcf'), 'world_change', 'system', UUID('f410b828-d5e2-4798-847f-a67c339e6fcf'), '{}', '{"id": "f410b828-d5e2-4798-847f-a67c339e6fcf", "type": "player", "name": "Valiant the Diceroller", "description": "A level 1 paladin", "metadata": {} ... (815 characters truncated) ... 100, "inventory": [], "active_quests": [], "completed_quests": [], "known_npcs": [], "known_locations": [], "personal_notes": {}, "recent_rolls": []}', None, 1.0, 'null')
+2025-08-08 00:08:55,799 INFO sqlalchemy.engine.Engine COMMIT
+2025-08-08 00:08:55,799 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-08-08 00:08:55,802 - core.world_service - INFO - Created EntityType.PLAYER entity: f410b828-d5e2-4798-847f-a67c339e6fcf
+INFO:     127.0.0.1:62758 - "POST /api/v1/game/character/create HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62761 - "POST /api/v1/entities HTTP/1.1" 422 Unprocessable Entity
+2025-08-08 00:08:55,844 - api.game_routes - INFO - Processing command: 'I confidently persuade the friendly bartender to give me information about local rumors' for player f410b828-d5e2-4798-847f-a67c339e6fcf
+2025-08-08 00:08:55,844 - core.semantic_parser - INFO - Parsing command: 'I confidently persuade the friendly bartender to give me information about local rumors' for player f410b828-d5e2-4798-847f-a67c339e6fcf
+2025-08-08 00:08:55,907 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: mps
+2025-08-08 00:08:55,907 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: paraphrase-multilingual-MiniLM-L12-v2
+2025-08-08 00:09:01,225 - infrastructure.command_classification_service - INFO - Loaded sentence transformer model: paraphrase-multilingual-MiniLM-L12-v2
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  3.02it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  9.15it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  9.35it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 11.71it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 50.56it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  8.76it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 11.69it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 11.14it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 10.58it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 13.50it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 16.47it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 10.04it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 15.61it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 12.19it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 36.42it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 38.30it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 39.57it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 12.06it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 45.81it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00,  4.20it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00,  9.30it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  7.04it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 25.20it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 36.38it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 39.85it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 12.03it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 45.78it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 44.45it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 46.35it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 58.60it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 46.00it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 48.93it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 48.91it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 12.20it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 44.88it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 42.30it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 42.07it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 57.83it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 40.50it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 41.10it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.41it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 58.61it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 49.11it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 43.10it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.64it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 61.43it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 50.17it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 48.65it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 49.87it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.02it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 51.39it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 49.94it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.57it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.83it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 49.65it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 42.34it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 41.79it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.04it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 39.96it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 31.36it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 43.99it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.96it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 52.33it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.06it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 44.12it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 41.33it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 44.80it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.12it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 45.58it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 60.33it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 50.87it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 48.21it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 49.01it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.98it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 50.13it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.82it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.52it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 64.01it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 53.05it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.00it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 46.93it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.41it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 52.01it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 45.36it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 46.11it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 61.95it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 52.08it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 44.23it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 46.85it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 61.85it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.12it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 44.88it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 47.22it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.85it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 50.16it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 48.14it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 49.68it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 60.49it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 51.27it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 50.13it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 46.48it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.55it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 53.67it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 48.50it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 46.64it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 62.42it/s]
+Batches:   0%|                                        | 0/2 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 50.21it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 46.10it/s]
+Batches: 100%|████████████████████████████████| 2/2 [00:00<00:00, 45.62it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 60.49it/s]
+2025-08-08 00:09:07,688 - core.semantic_parser - INFO - Extracted mentions from 'I confidently persuade the friendly bartender to give me information about local rumors': [(<EntityType.ITEM: 'item'>, 'the'), (<EntityType.ITEM: 'item'>, 'to')]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 39.67it/s]
+2025-08-08 00:09:07,765 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:09:07,768 - core.semantic_parser - INFO - Found item via vector search: Mug of Ale (54ca2804-029b-4a3c-ba9b-9d484d7fc690) score=0.03917801
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 78.70it/s]
+2025-08-08 00:09:07,789 - httpx - INFO - HTTP Request: POST http://localhost:6333/collections/gamemaster_world/points/search "HTTP/1.1 200 OK"
+2025-08-08 00:09:07,789 - core.semantic_parser - WARNING - No item found for 'to'
+2025-08-08 00:09:07,789 - core.semantic_parser - INFO - Final resolved entities: {'confidence': 0.019589005, 'item_id': UUID('54ca2804-029b-4a3c-ba9b-9d484d7fc690')}
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  8.08it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  9.90it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  8.14it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  9.32it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 40.02it/s]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 34.50it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 29.81it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 29.63it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 28.17it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 32.60it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 22.76it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 28.63it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 26.97it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 14.60it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  4.54it/s]
+2025-08-08 00:09:08,936 - core.semantic_parser - INFO - Parsed result: GameAction.PERSUASION -> NPC:None, Location:None
+2025-08-08 00:09:08,936 - api.game_routes - INFO - Parsed action: GameAction.PERSUASION, confidence: 0.22570158541202545
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 13.89it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  9.06it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 17.26it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 26.84it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 29.77it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 28.80it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 35.10it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 45.96it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 44.27it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 52.71it/s]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 29.18it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 37.71it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 30.51it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 30.10it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 39.07it/s]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 34.39it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 33.52it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 35.13it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 33.09it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 31.76it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 22.58it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 27.59it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 24.77it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 23.25it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  6.84it/s]
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  1.45it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:02<00:00,  2.37s/it]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  5.84it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  2.13it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  6.21it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00,  2.94it/s]
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 28.20it/s]
+2025-08-08 00:09:14,410 - core.dice_engine - INFO - Ability check: wisdom DC 15 -> 16 (Success)
+2025-08-08 00:09:14,566 - infrastructure.graph_db - INFO - Updated entity: f410b828-d5e2-4798-847f-a67c339e6fcf
+Batches:   0%|                                        | 0/1 [00:00<?, ?it/s]/Users/as/projects/ayaal/game-master/game_master_v3/venv/lib/python3.12/site-packages/torch/nn/modules/module.py:1762: FutureWarning: `encoder_attention_mask` is deprecated and will be removed in version 4.55.0 for `BertSdpaSelfAttention.forward`.
+  return forward_call(*args, **kwargs)
+Batches: 100%|████████████████████████████████| 1/1 [00:00<00:00, 16.36it/s]
+2025-08-08 00:09:14,691 - httpx - INFO - HTTP Request: PUT http://localhost:6333/collections/gamemaster_world/points?wait=true "HTTP/1.1 200 OK"
+2025-08-08 00:09:14,704 INFO sqlalchemy.engine.Engine BEGIN (implicit)
+2025-08-08 00:09:14,704 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2025-08-08 00:09:14,707 INFO sqlalchemy.engine.Engine INSERT INTO event_log (id, timestamp, event_id, entity_type, entity_id, action_type, actor_type, actor_id, before_state, after_state, session_id, confidence_score, rollback_data) VALUES ($1::UUID, $2::TIMESTAMP WITHOUT TIME ZONE, $3::UUID, $4::VARCHAR, $5::UUID, $6::VARCHAR, $7::VARCHAR, $8::UUID, $9::JSONB, $10::JSONB, $11::UUID, $12::FLOAT, $13::JSONB)
+2025-08-08 00:09:14,707 - sqlalchemy.engine.Engine - INFO - INSERT INTO event_log (id, timestamp, event_id, entity_type, entity_id, action_type, actor_type, actor_id, before_state, after_state, session_id, confidence_score, rollback_data) VALUES ($1::UUID, $2::TIMESTAMP WITHOUT TIME ZONE, $3::UUID, $4::VARCHAR, $5::UUID, $6::VARCHAR, $7::VARCHAR, $8::UUID, $9::JSONB, $10::JSONB, $11::UUID, $12::FLOAT, $13::JSONB)
+2025-08-08 00:09:14,707 INFO sqlalchemy.engine.Engine [cached since 18.92s ago] (UUID('2ef2130c-b52f-4194-bfd3-c58797d9de83'), datetime.datetime(2025, 8, 7, 17, 9, 14, 698610), UUID('3c550465-017f-4a85-abbc-bffab6d23282'), 'player', UUID('f410b828-d5e2-4798-847f-a67c339e6fcf'), 'world_change', 'system', UUID('f410b828-d5e2-4798-847f-a67c339e6fcf'), '{"id": "f410b828-d5e2-4798-847f-a67c339e6fcf", "type": "player", "name": "Valiant the Diceroller", "description": "A level 1 paladin", "metadata": {} ... (815 characters truncated) ... 100, "inventory": [], "active_quests": [], "completed_quests": [], "known_npcs": [], "known_locations": [], "personal_notes": {}, "recent_rolls": []}', '{"id": "f410b828-d5e2-4798-847f-a67c339e6fcf", "type": "player", "name": "Valiant the Diceroller", "description": "A level 1 paladin", "metadata": {} ... (1287 characters truncated) ... General check: I confidently persuade the friendly bartender to give me information about local rumors", "timestamp": "2025-08-07T17:09:14.410218"}]}', UUID('fcc5ff00-170a-4e0c-ad2b-22d6c1c76f65'), 1.0, '{"id": "f410b828-d5e2-4798-847f-a67c339e6fcf", "type": "player", "name": "Valiant the Diceroller", "description": "A level 1 paladin", "metadata": {} ... (815 characters truncated) ... 100, "inventory": [], "active_quests": [], "completed_quests": [], "known_npcs": [], "known_locations": [], "personal_notes": {}, "recent_rolls": []}')
+2025-08-08 00:09:14,707 - sqlalchemy.engine.Engine - INFO - [cached since 18.92s ago] (UUID('2ef2130c-b52f-4194-bfd3-c58797d9de83'), datetime.datetime(2025, 8, 7, 17, 9, 14, 698610), UUID('3c550465-017f-4a85-abbc-bffab6d23282'), 'player', UUID('f410b828-d5e2-4798-847f-a67c339e6fcf'), 'world_change', 'system', UUID('f410b828-d5e2-4798-847f-a67c339e6fcf'), '{"id": "f410b828-d5e2-4798-847f-a67c339e6fcf", "type": "player", "name": "Valiant the Diceroller", "description": "A level 1 paladin", "metadata": {} ... (815 characters truncated) ... 100, "inventory": [], "active_quests": [], "completed_quests": [], "known_npcs": [], "known_locations": [], "personal_notes": {}, "recent_rolls": []}', '{"id": "f410b828-d5e2-4798-847f-a67c339e6fcf", "type": "player", "name": "Valiant the Diceroller", "description": "A level 1 paladin", "metadata": {} ... (1287 characters truncated) ... General check: I confidently persuade the friendly bartender to give me information about local rumors", "timestamp": "2025-08-07T17:09:14.410218"}]}', UUID('fcc5ff00-170a-4e0c-ad2b-22d6c1c76f65'), 1.0, '{"id": "f410b828-d5e2-4798-847f-a67c339e6fcf", "type": "player", "name": "Valiant the Diceroller", "description": "A level 1 paladin", "metadata": {} ... (815 characters truncated) ... 100, "inventory": [], "active_quests": [], "completed_quests": [], "known_npcs": [], "known_locations": [], "personal_notes": {}, "recent_rolls": []}')
+2025-08-08 00:09:14,734 INFO sqlalchemy.engine.Engine COMMIT
+2025-08-08 00:09:14,734 - sqlalchemy.engine.Engine - INFO - COMMIT
+2025-08-08 00:09:14,737 - core.world_service - INFO - Updated EntityType.PLAYER entity: f410b828-d5e2-4798-847f-a67c339e6fcf
+INFO:     127.0.0.1:62777 - "GET /metrics HTTP/1.1" 200 OK

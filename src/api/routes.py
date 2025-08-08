@@ -114,6 +114,43 @@ async def create_entity(request: CreateEntityRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/entities", response_model=List[EntityResponse])
+async def get_entities(
+    entity_type: Optional[EntityType] = Query(default=None, description="Filter by entity type"),
+    limit: int = Query(default=50, ge=1, le=1000, description="Maximum entities per type")
+):
+    """Get all entities, optionally filtered by type"""
+    try:
+        if entity_type:
+            # Get entities of specific type
+            entities = await world_service.get_entities_by_type(entity_type, limit)
+            return [
+                EntityResponse(
+                    entity=entity.dict(),
+                    entity_type=entity.type.value,
+                )
+                for entity in entities
+            ]
+        else:
+            # Get all entities
+            all_entities = await world_service.get_all_entities(limit_per_type=limit)
+            
+            # Flatten the results
+            response = []
+            for entity_type, entities in all_entities.items():
+                for entity in entities:
+                    response.append(EntityResponse(
+                        entity=entity.dict(),
+                        entity_type=entity.type.value,
+                    ))
+            
+            return response
+        
+    except Exception as e:
+        logger.error(f"Failed to get entities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/entities/{entity_id}", response_model=Optional[EntityResponse])
 async def get_entity(entity_id: UUID, entity_type: Optional[EntityType] = None):
     """Get entity by ID"""

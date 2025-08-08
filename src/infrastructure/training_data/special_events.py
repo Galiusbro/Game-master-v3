@@ -50,4 +50,19 @@ class SpecialEventTrainingData:
             ClassificationExample("возрождение", "resurrection_event"),
             ClassificationExample("восстание из мертвых", "resurrection_event"),
             ClassificationExample("второе рождение", "resurrection_event"),
+            
+            # SCROLL USAGE - использование свитков воскрешения
+            ClassificationExample("I use the scroll of resurrection", "resurrection_event"),
+            ClassificationExample("I activate the resurrection scroll", "resurrection_event"),
+            ClassificationExample("I read the scroll of revival", "resurrection_event"),
+            ClassificationExample("я использую свиток воскрешения", "resurrection_event"),
+            ClassificationExample("активирую свиток возрождения", "resurrection_event"),
+            ClassificationExample("читаю свиток оживления", "resurrection_event"),
+            ClassificationExample("применяю магический свиток", "resurrection_event"),
+            ClassificationExample("use resurrection scroll", "resurrection_event"),
+            ClassificationExample("activate revival scroll", "resurrection_event"),
+            ClassificationExample("consume scroll of life", "resurrection_event"),
+            ClassificationExample("invoke the scroll", "resurrection_event"),
+            ClassificationExample("я кастую свиток воскрешения", "resurrection_event"),
+            ClassificationExample("использую магический свиток жизни", "resurrection_event"),
         ]

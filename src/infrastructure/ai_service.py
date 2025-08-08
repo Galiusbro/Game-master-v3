@@ -175,6 +175,59 @@ Determine the outcome of this action, explaining the reasoning and any consequen
                 max_tokens=900,
                 temperature=0.6,
                 anti_hallucination_instructions="Base outcomes only on provided character stats, world rules, and context. Do not invent new mechanics or rules."
+            ),
+            
+            "death_response": PromptTemplate(
+                system_prompt="""You are an AI Game Master responding to a dead player character in a fantasy RPG.
+The player has died and is trying to continue playing. Your role is to:
+
+CRITICAL RULES:
+- Acknowledge their death with appropriate gravity and atmosphere
+- Explain that they need a Scroll of Resurrection to continue
+- Be immersive and atmospheric in your response
+- Reference their character class and the command they attempted
+- Maintain the fantasy RPG tone while being clear about game mechanics
+- Do not invent new resurrection methods beyond scrolls
+- Be encouraging but firm about the resurrection requirement""",
+                user_template="""PLAYER CHARACTER:
+Name: {player_name}
+Class: {player_class}
+Current Status: DEAD (HP: 0)
+
+LAST ATTEMPTED ACTION: {command}
+
+As the Game Master, respond to this dead player who is trying to continue their adventure. 
+Explain their current state, the need for a Scroll of Resurrection, and maintain the immersive fantasy atmosphere.""",
+                max_tokens=600,
+                temperature=0.7,
+                anti_hallucination_instructions="Only mention Scroll of Resurrection as the revival method. Do not invent other resurrection mechanics."
+            ),
+            
+            "resurrection_response": PromptTemplate(
+                system_prompt="""You are an AI Game Master narrating a successful resurrection in a fantasy RPG.
+The player has successfully used a Scroll of Resurrection and returned to life. Your role is to:
+
+CRITICAL RULES:
+- Describe the resurrection process with wonder and divine/magical atmosphere
+- Reference the scroll's power and the character's return to life
+- Show the restoration of health and vitality
+- Make it feel like a significant, meaningful event
+- Reference their character class and the resurrection command
+- Maintain an uplifting, triumphant tone while being atmospheric
+- Do not make the resurrection feel trivial or common
+- Emphasize the second chance at life and adventure""",
+                user_template="""PLAYER CHARACTER:
+Name: {player_name}
+Class: {player_class}
+Previous Status: DEAD → NOW ALIVE (HP: Fully Restored)
+
+RESURRECTION ACTION: {command}
+
+As the Game Master, describe the miraculous resurrection process as {player_name} returns to life through the power of the scroll. 
+Make this moment feel epic, meaningful, and atmospheric while confirming their return to the world of the living.""",
+                max_tokens=700,
+                temperature=0.8,
+                anti_hallucination_instructions="Focus on the scroll's power and the character's resurrection. Do not invent new world elements."
             )
         }
     
@@ -783,6 +836,122 @@ Armor Class: {player.stats.armor_class}
             logger.error(f"Dice outcome narration generation failed: {e}")
             return AIResponse(
                 content=f"You attempt {action_description}. The outcome becomes clear through your actions.",
+                confidence=0.0,
+                tokens_used=0,
+                response_time=time.time() - start_time,
+                hallucination_detected=True,
+                warnings=[f"Generation failed: {str(e)}"]
+            )
+    
+    @track_ai_operation("death_response", settings.llm_model)
+    async def generate_death_response(
+        self,
+        player_name: str,
+        player_class: str,
+        command: str,
+        max_retries: int = 2
+    ) -> AIResponse:
+        """Generate AI response for dead player attempting to continue"""
+        start_time = time.time()
+        
+        template = self.templates["death_response"]
+        
+        try:
+            # Prepare prompt
+            user_prompt = template.user_template.format(
+                player_name=player_name,
+                player_class=player_class,
+                command=command
+            )
+            
+            logger.debug(f"Generating death response for dead player: {player_name}")
+            
+            response = await self.client.chat.completions.create(
+                model=settings.llm_model,
+                messages=[
+                    {"role": "system", "content": template.system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=template.max_tokens,
+                temperature=template.temperature
+            )
+            
+            content = response.choices[0].message.content
+            tokens_used = response.usage.total_tokens
+            response_time = time.time() - start_time
+            
+            return AIResponse(
+                content=content,
+                confidence=0.9,
+                tokens_used=tokens_used,
+                response_time=response_time,
+                hallucination_detected=False,
+                cited_entities=[],
+                warnings=[]
+            )
+            
+        except Exception as e:
+            logger.error(f"Death response generation failed: {e}")
+            return AIResponse(
+                content=f"💀 {player_name}, you have fallen in battle. Your spirit lingers between life and death. To continue your adventure as a {player_class}, you must acquire a Scroll of Resurrection from a powerful cleric or merchant. Your last attempt was: '{command}'",
+                confidence=0.0,
+                tokens_used=0,
+                response_time=time.time() - start_time,
+                hallucination_detected=True,
+                warnings=[f"Generation failed: {str(e)}"]
+            )
+    
+    @track_ai_operation("resurrection_response", settings.llm_model)
+    async def generate_resurrection_response(
+        self,
+        player_name: str,
+        player_class: str,
+        command: str,
+        max_retries: int = 2
+    ) -> AIResponse:
+        """Generate AI response for successful resurrection"""
+        start_time = time.time()
+        
+        template = self.templates["resurrection_response"]
+        
+        try:
+            # Prepare prompt
+            user_prompt = template.user_template.format(
+                player_name=player_name,
+                player_class=player_class,
+                command=command
+            )
+            
+            logger.debug(f"Generating resurrection response for revived player: {player_name}")
+            
+            response = await self.client.chat.completions.create(
+                model=settings.llm_model,
+                messages=[
+                    {"role": "system", "content": template.system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=template.max_tokens,
+                temperature=template.temperature
+            )
+            
+            content = response.choices[0].message.content
+            tokens_used = response.usage.total_tokens
+            response_time = time.time() - start_time
+            
+            return AIResponse(
+                content=content,
+                confidence=0.9,
+                tokens_used=tokens_used,
+                response_time=response_time,
+                hallucination_detected=False,
+                cited_entities=[],
+                warnings=[]
+            )
+            
+        except Exception as e:
+            logger.error(f"Resurrection response generation failed: {e}")
+            return AIResponse(
+                content=f"✨ {player_name}, the divine magic of the scroll courses through your body! As a {player_class}, you feel the warmth of life returning to your veins. Your HP is fully restored, and your adventure continues with renewed purpose. Your resurrection was triggered by: '{command}'",
                 confidence=0.0,
                 tokens_used=0,
                 response_time=time.time() - start_time,

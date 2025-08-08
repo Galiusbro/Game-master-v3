@@ -64,6 +64,11 @@ class ClassificationCategory(Enum):
     ENTITY_TYPE = "entity_type"
     LIGHTING_CONDITION = "lighting_condition"
     CONTENT_QUALITY = "content_quality"
+    ENTITY_STATE = "entity_state"
+    LOCATION_TYPE = "location_type"
+    NPC_ATTITUDE = "npc_attitude"
+    ACTION_URGENCY = "action_urgency"
+    SOCIAL_INTENT = "social_intent"
 
 
 class GameContext(Enum):
@@ -110,6 +115,14 @@ class CommandClassificationService:
         
     def _load_model(self):
         """Lazy load the sentence transformer model"""
+        # Suppress specific FutureWarning from transformers' BertSdpaSelfAttention about
+        # encoder_attention_mask deprecation, which we do not control from here
+        import warnings
+        warnings.filterwarnings(
+            "ignore",
+            message=r"`encoder_attention_mask` is deprecated and will be removed in version 4\.55\.0",
+            category=FutureWarning,
+        )
         if not EMBEDDINGS_AVAILABLE:
             logger.warning("Sentence transformers not available, using fallback classification")
             return
@@ -139,6 +152,11 @@ class CommandClassificationService:
         from infrastructure.training_data.ability_detection import AbilityDetectionTrainingData
         from infrastructure.training_data.lighting_conditions import LightingConditionTrainingData
         from infrastructure.training_data.content_quality import ContentQualityTrainingData
+        from infrastructure.training_data.entity_states import EntityStateTrainingData
+        from infrastructure.training_data.location_types import LocationTypeTrainingData
+        from infrastructure.training_data.npc_attitudes import NPCAttitudeTrainingData
+        from infrastructure.training_data.action_urgency import ActionUrgencyTrainingData
+        from infrastructure.training_data.social_intents import SocialIntentTrainingData
         
         # Load all training data
         self.training_data[ClassificationCategory.GAME_ACTION] = GameActionTrainingData.get_examples()
@@ -148,6 +166,11 @@ class CommandClassificationService:
         self.training_data[ClassificationCategory.ABILITY_DETECTION] = AbilityDetectionTrainingData.get_examples()
         self.training_data[ClassificationCategory.LIGHTING_CONDITION] = LightingConditionTrainingData.get_examples()
         self.training_data[ClassificationCategory.CONTENT_QUALITY] = ContentQualityTrainingData.get_examples()
+        self.training_data[ClassificationCategory.ENTITY_STATE] = EntityStateTrainingData.get_examples()
+        self.training_data[ClassificationCategory.LOCATION_TYPE] = LocationTypeTrainingData.get_examples()
+        self.training_data[ClassificationCategory.NPC_ATTITUDE] = NPCAttitudeTrainingData.get_examples()
+        self.training_data[ClassificationCategory.ACTION_URGENCY] = ActionUrgencyTrainingData.get_examples()
+        self.training_data[ClassificationCategory.SOCIAL_INTENT] = SocialIntentTrainingData.get_examples()
         
         logger.info(f"Loaded training data: "
                    f"Game Actions: {len(self.training_data[ClassificationCategory.GAME_ACTION])}, "
@@ -156,7 +179,31 @@ class CommandClassificationService:
                    f"Content Priority: {len(self.training_data[ClassificationCategory.CONTENT_PRIORITY])}, "
                    f"Ability Detection: {len(self.training_data[ClassificationCategory.ABILITY_DETECTION])}, "
                    f"Lighting Conditions: {len(self.training_data[ClassificationCategory.LIGHTING_CONDITION])}, "
-                   f"Content Quality: {len(self.training_data[ClassificationCategory.CONTENT_QUALITY])}")
+                   f"Content Quality: {len(self.training_data[ClassificationCategory.CONTENT_QUALITY])}, "
+                   f"Entity States: {len(self.training_data[ClassificationCategory.ENTITY_STATE])}, "
+                   f"Location Types: {len(self.training_data[ClassificationCategory.LOCATION_TYPE])}, "
+                   f"NPC Attitudes: {len(self.training_data[ClassificationCategory.NPC_ATTITUDE])}, "
+                   f"Action Urgency: {len(self.training_data[ClassificationCategory.ACTION_URGENCY])}, "
+                   f"Social Intent: {len(self.training_data[ClassificationCategory.SOCIAL_INTENT])}")
+
+    def classify_social_intent(self, text: str) -> Tuple[Optional[str], float]:
+        """Classify social intent in dialogue (e.g., befriend)"""
+        if not EMBEDDINGS_AVAILABLE:
+            # Fallback simple rules
+            t = text.lower()
+            befriend_tokens = ["подруж", "дружить", "be friends", "befriend"]
+            if any(tok in t for tok in befriend_tokens):
+                return "befriend", 0.5
+            return None, 0.0
+
+        try:
+            intent, confidence = self._classify_with_embeddings(text, ClassificationCategory.SOCIAL_INTENT)
+            if intent == "UNKNOWN":
+                return None, 0.0
+            return intent, confidence
+        except Exception as e:
+            logger.warning(f"Social intent classification failed: {e}")
+            return None, 0.0
 
     def _prepare_embeddings(self, category: ClassificationCategory):
         """Prepare embeddings for a specific category"""
@@ -606,6 +653,379 @@ class CommandClassificationService:
             return "medium_quality"
         else:
             return "low_quality"
+    
+    def detect_entity_state(self, description: str) -> Tuple[str, float]:
+        """
+        Detect entity state from description text.
+        
+        Args:
+            description: Entity description text
+            
+        Returns:
+            Tuple of (entity_state, confidence)
+            
+        Possible entity states: 'alive', 'dead', 'unconscious', 'dying'
+        """
+        if not EMBEDDINGS_AVAILABLE:
+            return self._fallback_entity_state_detection(description), 0.3
+        
+        try:
+            entity_state, confidence = self._classify_with_embeddings(description, ClassificationCategory.ENTITY_STATE)
+            
+            if entity_state == "UNKNOWN":
+                return "alive", 0.0  # Default to alive if uncertain
+            
+            return entity_state, confidence
+                
+        except Exception as e:
+            logger.warning(f"Entity state detection failed: {e}")
+            return self._fallback_entity_state_detection(description), 0.3
+    
+    def _fallback_entity_state_detection(self, description: str) -> str:
+        """Simple fallback entity state detection when embeddings are not available"""
+        desc_lower = description.lower()
+        
+        # Simple keyword patterns for different states
+        dead_keywords = ['dead', 'lifeless', 'motionless', 'corpse', 'body', 'deceased', 'fallen',
+                        'мёртв', 'безжизненн', 'неподвижн', 'труп', 'тело', 'умерш', 'павш']
+        
+        dying_keywords = ['dying', 'bleeding', 'wounded', 'poison', 'last breath', 'fading',
+                         'умира', 'кровоточ', 'ранен', 'яд', 'последний вздох', 'угаса']
+        
+        unconscious_keywords = ['unconscious', 'sleeping', 'fainted', 'knocked out', 'stasis',
+                               'без сознания', 'спит', 'обморок', 'вырублен', 'стазис']
+        
+        alive_keywords = ['alive', 'breathing', 'walking', 'talking', 'smiling', 'active',
+                         'жив', 'дыш', 'ходит', 'говор', 'улыба', 'активн']
+        
+        # Check in order of specificity
+        for keyword in dead_keywords:
+            if keyword in desc_lower:
+                return "dead"
+        
+        for keyword in dying_keywords:
+            if keyword in desc_lower:
+                return "dying"
+                
+        for keyword in unconscious_keywords:
+            if keyword in desc_lower:
+                return "unconscious"
+        
+        for keyword in alive_keywords:
+            if keyword in desc_lower:
+                return "alive"
+        
+        # Default to alive if no specific state detected
+        return "alive"
+    
+    def generate_state_description(self, entity_name: str, state: str, context: str = "") -> str:
+        """
+        Generate appropriate description text for entity state.
+        
+        Args:
+            entity_name: Name of the entity
+            state: Entity state ('alive', 'dead', 'unconscious', 'dying')
+            context: Additional context for description
+            
+        Returns:
+            Generated description text
+        """
+        import random
+        
+        if state == "dead":
+            templates = [
+                f"The lifeless body of {entity_name} lies motionless, all warmth of life having departed.",
+                f"{entity_name}'s form rests in eternal stillness, no breath escaping their lips.",
+                f"Death has claimed {entity_name} - their eyes are closed forever in final peace.",
+                f"The cold shell that was once {entity_name} bears no spark of life within.",
+                f"{entity_name} has fallen, never again to rise or speak."
+            ]
+        elif state == "unconscious":
+            templates = [
+                f"{entity_name} lies unconscious but breathing steadily, lost in deep slumber.",
+                f"Knocked unconscious, {entity_name} shows no awareness but vital signs remain strong.",
+                f"{entity_name} rests in peaceful unconsciousness, chest rising and falling rhythmically.",
+                f"Though unresponsive, {entity_name}'s pulse beats steadily - they live but do not wake.",
+                f"{entity_name} sleeps deeply, oblivious to the world around them."
+            ]
+        elif state == "dying":
+            templates = [
+                f"{entity_name} draws labored breaths, life ebbing away like sand through fingers.",
+                f"The light slowly fades from {entity_name}'s eyes as they hover between life and death.",
+                f"{entity_name} fights desperately to cling to life, but time grows short.",
+                f"Mortally wounded, {entity_name} lies bleeding heavily, consciousness slipping away.",
+                f"{entity_name}'s weakening form struggles against the approaching darkness."
+            ]
+        else:  # alive
+            templates = [
+                f"{entity_name} stands alert and vital, eyes bright with life and intelligence.",
+                f"Full of energy and awareness, {entity_name} moves with confident purpose.",
+                f"{entity_name} breathes easily, their healthy complexion showing vibrant life.",
+                f"Very much alive and well, {entity_name} responds with warmth and attention.",
+                f"{entity_name}'s lively presence fills the space with dynamic energy."
+            ]
+        
+        return random.choice(templates)
+    
+    def classify_location_type(self, description: str) -> Tuple[Optional[str], float]:
+        """
+        Classify location type from description text.
+        
+        Args:
+            description: Location description text
+            
+        Returns:
+            Tuple of (location_type, confidence)
+            
+        Possible location types: 'dungeon', 'town', 'wilderness', 'indoor', 'underground', 'magical_realm'
+        """
+        if not EMBEDDINGS_AVAILABLE:
+            return self._fallback_location_classification(description), 0.3
+        
+        try:
+            location_type, confidence = self._classify_with_embeddings(description, ClassificationCategory.LOCATION_TYPE)
+            
+            if location_type == "UNKNOWN":
+                return None, 0.0
+            
+            return location_type, confidence
+                
+        except Exception as e:
+            logger.warning(f"Location type classification failed: {e}")
+            return self._fallback_location_classification(description), 0.3
+    
+    def _fallback_location_classification(self, description: str) -> Optional[str]:
+        """Simple fallback location classification when embeddings are not available"""
+        desc_lower = description.lower()
+        
+        # Keyword patterns for different location types
+        dungeon_keywords = ['dungeon', 'cave', 'cavern', 'tomb', 'crypt', 'underground', 'corridor', 'chamber',
+                           'подземелье', 'пещера', 'грот', 'гробница', 'склеп', 'коридор', 'камера']
+        
+        town_keywords = ['town', 'city', 'village', 'market', 'tavern', 'inn', 'shop', 'street', 'square',
+                        'город', 'деревня', 'рынок', 'таверна', 'гостиница', 'лавка', 'улица', 'площадь']
+        
+        wilderness_keywords = ['forest', 'mountain', 'hill', 'plain', 'field', 'meadow', 'tree', 'grass', 'path',
+                              'лес', 'гора', 'холм', 'равнина', 'поле', 'луг', 'дерево', 'трава', 'тропа']
+        
+        indoor_keywords = ['room', 'hall', 'chamber', 'study', 'bedroom', 'kitchen', 'library', 'fireplace',
+                          'комната', 'зал', 'кабинет', 'спальня', 'кухня', 'библиотека', 'камин']
+        
+        magical_keywords = ['magical', 'arcane', 'ethereal', 'plane', 'realm', 'portal', 'enchanted', 'mystical',
+                           'магический', 'магия', 'эфирный', 'план', 'мир', 'портал', 'заколдованный']
+        
+        underground_keywords = ['sewer', 'tunnel', 'passage', 'beneath', 'below', 'underground city',
+                               'канализация', 'туннель', 'проход', 'под', 'внизу', 'подземный город']
+        
+        # Check in order of specificity
+        for keyword in magical_keywords:
+            if keyword in desc_lower:
+                return "magical_realm"
+                
+        for keyword in dungeon_keywords:
+            if keyword in desc_lower:
+                return "dungeon"
+                
+        for keyword in underground_keywords:
+            if keyword in desc_lower:
+                return "underground"
+        
+        for keyword in town_keywords:
+            if keyword in desc_lower:
+                return "town"
+                
+        for keyword in indoor_keywords:
+            if keyword in desc_lower:
+                return "indoor"
+                
+        for keyword in wilderness_keywords:
+            if keyword in desc_lower:
+                return "wilderness"
+        
+        # Default to indoor if no specific type detected
+        return "indoor"
+    
+    def classify_npc_attitude(self, description: str) -> Tuple[Optional[str], float]:
+        """
+        Classify NPC attitude from description text.
+        
+        Args:
+            description: NPC description or behavior text
+            
+        Returns:
+            Tuple of (attitude, confidence)
+            
+        Possible attitudes: 'friendly', 'neutral', 'hostile', 'suspicious', 'helpful', 'angry', 'fearful'
+        """
+        if not EMBEDDINGS_AVAILABLE:
+            return self._fallback_npc_attitude_classification(description), 0.3
+        
+        try:
+            attitude, confidence = self._classify_with_embeddings(description, ClassificationCategory.NPC_ATTITUDE)
+            
+            if attitude == "UNKNOWN":
+                return "neutral", 0.0  # Default to neutral if uncertain
+            
+            return attitude, confidence
+                
+        except Exception as e:
+            logger.warning(f"NPC attitude classification failed: {e}")
+            return self._fallback_npc_attitude_classification(description), 0.3
+    
+    def _fallback_npc_attitude_classification(self, description: str) -> str:
+        """Simple fallback NPC attitude classification when embeddings are not available"""
+        desc_lower = description.lower()
+        
+        # Keyword patterns for different attitudes
+        hostile_keywords = ['attack', 'hostile', 'aggressive', 'threaten', 'weapon', 'enemy', 'snarl', 'growl',
+                           'атак', 'враждебн', 'агрессивн', 'угрожа', 'оружие', 'враг', 'рычит', 'злоб']
+        
+        angry_keywords = ['angry', 'furious', 'rage', 'shout', 'yell', 'fist', 'indignant', 'storm',
+                         'злой', 'яростн', 'гнев', 'кричит', 'орёт', 'кулак', 'негодова', 'мечется']
+        
+        fearful_keywords = ['afraid', 'scared', 'terrified', 'tremble', 'cower', 'panic', 'flee', 'hide',
+                           'боится', 'испуган', 'ужас', 'дрожит', 'съёжив', 'паника', 'бежит', 'прячет']
+        
+        suspicious_keywords = ['suspicious', 'wary', 'cautious', 'distrust', 'watch', 'guard', 'reluctant',
+                              'подозрит', 'настороженн', 'осторожн', 'не доверя', 'следит', 'охраня', 'неохотн']
+        
+        helpful_keywords = ['help', 'assist', 'guide', 'advice', 'generous', 'support', 'eager', 'willing',
+                           'помога', 'содейств', 'проводник', 'совет', 'щедр', 'поддержк', 'готов', 'желает']
+        
+        friendly_keywords = ['friendly', 'warm', 'smile', 'welcome', 'cheerful', 'kind', 'pleasant', 'happy',
+                            'дружелюбн', 'тёпл', 'улыбка', 'приветлив', 'весёл', 'добр', 'приятн', 'счастлив']
+        
+        # Check in order of specificity (most specific first)
+        for keyword in hostile_keywords:
+            if keyword in desc_lower:
+                return "hostile"
+                
+        for keyword in angry_keywords:
+            if keyword in desc_lower:
+                return "angry"
+                
+        for keyword in fearful_keywords:
+            if keyword in desc_lower:
+                return "fearful"
+                
+        for keyword in suspicious_keywords:
+            if keyword in desc_lower:
+                return "suspicious"
+                
+        for keyword in helpful_keywords:
+            if keyword in desc_lower:
+                return "helpful"
+                
+        for keyword in friendly_keywords:
+            if keyword in desc_lower:
+                return "friendly"
+        
+        # Default to neutral if no specific attitude detected
+        return "neutral"
+    
+    def classify_action_urgency(self, command: str) -> Tuple[Optional[str], float]:
+        """
+        Classify action urgency from command text.
+        
+        Args:
+            command: Player command text
+            
+        Returns:
+            Tuple of (urgency_level, confidence)
+            
+        Possible urgency levels: 'casual', 'careful', 'urgent', 'desperate'
+        """
+        if not EMBEDDINGS_AVAILABLE:
+            return self._fallback_action_urgency_classification(command), 0.3
+        
+        try:
+            urgency, confidence = self._classify_with_embeddings(command, ClassificationCategory.ACTION_URGENCY)
+            
+            if urgency == "UNKNOWN":
+                return "casual", 0.0  # Default to casual if uncertain
+            
+            return urgency, confidence
+                
+        except Exception as e:
+            logger.warning(f"Action urgency classification failed: {e}")
+            return self._fallback_action_urgency_classification(command), 0.3
+    
+    def _fallback_action_urgency_classification(self, command: str) -> str:
+        """Simple fallback action urgency classification when embeddings are not available"""
+        cmd_lower = command.lower()
+        
+        # Keyword patterns for different urgency levels
+        desperate_keywords = ['frantically', 'desperately', 'wildly', 'panic', 'scream', 'throw myself', 'claw',
+                             'отчаянно', 'дико', 'паника', 'кричу', 'бросаюсь', 'царапаю', 'слепой']
+        
+        urgent_keywords = ['quickly', 'fast', 'rush', 'hurry', 'immediately', 'swift', 'rapid', 'sprint',
+                          'быстро', 'спешу', 'тороплюсь', 'немедленно', 'стремительно', 'бегу']
+        
+        careful_keywords = ['carefully', 'slowly', 'cautiously', 'quietly', 'methodically', 'study', 'plan',
+                           'осторожно', 'медленно', 'тихо', 'методично', 'изучаю', 'планирую', 'обдумываю']
+        
+        casual_keywords = ['walk', 'chat', 'browse', 'sit', 'enjoy', 'tell', 'ask', 'look around',
+                          'подхожу', 'болтаю', 'просматриваю', 'присаживаюсь', 'наслаждаюсь', 'рассказываю']
+        
+        # Check in order of specificity (most urgent first)
+        for keyword in desperate_keywords:
+            if keyword in cmd_lower:
+                return "desperate"
+                
+        for keyword in urgent_keywords:
+            if keyword in cmd_lower:
+                return "urgent"
+                
+        for keyword in careful_keywords:
+            if keyword in cmd_lower:
+                return "careful"
+                
+        for keyword in casual_keywords:
+            if keyword in cmd_lower:
+                return "casual"
+        
+        # Default to casual if no specific urgency detected
+        return "casual"
+    
+    def calculate_urgency_dc_modifier(self, urgency: str, base_action: str) -> int:
+        """
+        Calculate DC modifier based on action urgency.
+        
+        Args:
+            urgency: Urgency level ('casual', 'careful', 'urgent', 'desperate')
+            base_action: Base action type for context
+            
+        Returns:
+            DC modifier (-5 to +5)
+        """
+        modifiers = {
+            'careful': -2,    # Easier DC for careful actions
+            'casual': 0,      # No modifier for normal actions
+            'urgent': +2,     # Harder DC for rushed actions
+            'desperate': +4   # Much harder DC for desperate actions
+        }
+        
+        base_modifier = modifiers.get(urgency, 0)
+        
+        # Special adjustments based on action type
+        if base_action in ['stealth', 'investigation', 'sleight_of_hand']:
+            # These actions benefit more from being careful
+            if urgency == 'careful':
+                base_modifier = -3
+            elif urgency == 'desperate':
+                base_modifier = +5  # These actions suffer heavily from panic
+        
+        elif base_action in ['athletics', 'combat']:
+            # Physical actions can sometimes benefit from urgency
+            if urgency == 'urgent':
+                base_modifier = +1  # Less penalty for urgent physical actions
+                
+        elif base_action in ['persuasion', 'deception']:
+            # Social actions need the right timing
+            if urgency == 'desperate':
+                base_modifier = +3  # Desperation in social situations is bad but not as bad
+        
+        return base_modifier
     
     def add_training_example(self, category: ClassificationCategory, example: ClassificationExample):
         """Add a new training example and update embeddings"""

@@ -265,12 +265,13 @@ class WorldService:
         limit: int = 10,
         entity_types: Optional[List[EntityType]] = None,
         include_graph_context: bool = False,
+        filters: Optional[Dict[str, Any]] = None,
     ) -> List[Tuple[BaseEntity, float]]:
         """Search entities with optional graph context expansion"""
         
         # Try cache first (for simple searches without graph context)
         if not include_graph_context:
-            cached_results = await cache_service.get_vector_search(query, entity_types, limit)
+            cached_results = await cache_service.get_vector_search(query, entity_types, limit, filters)
             if cached_results:
                 return cached_results
         
@@ -279,11 +280,12 @@ class WorldService:
             query=query,
             limit=limit,
             entity_types=entity_types,
+            filters=filters,
         )
         
         # Cache simple search results
         if not include_graph_context:
-            await cache_service.set_vector_search(query, entity_types, limit, vector_results)
+            await cache_service.set_vector_search(query, entity_types, limit, vector_results, filters)
         
         if not include_graph_context:
             return vector_results
@@ -322,6 +324,42 @@ class WorldService:
         await cache_service.set_entity_context(entity_id, max_depth, entity_types, context_entities)
         
         return context_entities
+    
+    async def get_entities_by_type(
+        self,
+        entity_type: EntityType,
+        limit: int = 100
+    ) -> List[BaseEntity]:
+        """Get all entities of a specific type"""
+        try:
+            entities = await graph_db.get_entities_by_type(entity_type, limit)
+            logger.debug(f"Retrieved {len(entities)} {entity_type.value} entities")
+            return entities
+        except Exception as e:
+            logger.error(f"Failed to get entities by type {entity_type}: {e}")
+            raise
+    
+    async def get_all_entities(
+        self,
+        entity_types: Optional[List[EntityType]] = None,
+        limit_per_type: int = 50
+    ) -> Dict[EntityType, List[BaseEntity]]:
+        """Get all entities, optionally filtered by type"""
+        try:
+            if entity_types is None:
+                entity_types = list(EntityType)
+            
+            all_entities = {}
+            for entity_type in entity_types:
+                entities = await self.get_entities_by_type(entity_type, limit_per_type)
+                all_entities[entity_type] = entities
+            
+            logger.debug(f"Retrieved entities: {sum(len(entities) for entities in all_entities.values())} total")
+            return all_entities
+            
+        except Exception as e:
+            logger.error(f"Failed to get all entities: {e}")
+            raise
     
     async def create_relationship(
         self,

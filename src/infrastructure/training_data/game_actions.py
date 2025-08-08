@@ -100,4 +100,35 @@ class GameActionTrainingData:
             ClassificationExample("pick the lock", GameAction.STEALTH.value),
             ClassificationExample("pickpocket the merchant", GameAction.STEALTH.value),
             ClassificationExample("move silently", GameAction.STEALTH.value),
+            
+            # INVESTIGATION - детальное исследование
+            ClassificationExample("examine the mysterious artifact", GameAction.INVESTIGATION.value),
+            ClassificationExample("investigate the glowing object", GameAction.INVESTIGATION.value),
+            ClassificationExample("inspect the ancient altar", GameAction.INVESTIGATION.value),
+            ClassificationExample("study the magical runes", GameAction.INVESTIGATION.value),
+            ClassificationExample("analyze the strange device", GameAction.INVESTIGATION.value),
+            ClassificationExample("осматриваю загадочный артефакт", GameAction.INVESTIGATION.value),
+            ClassificationExample("исследую светящийся предмет", GameAction.INVESTIGATION.value),
+            ClassificationExample("изучаю древний алтарь", GameAction.INVESTIGATION.value),
+            ClassificationExample("анализирую странное устройство", GameAction.INVESTIGATION.value),
+            ClassificationExample("обыскиваю древнюю гробницу", GameAction.INVESTIGATION.value),
+            
+            # PERSUASION - убеждение и переговоры
+            ClassificationExample("try to persuade the guard", GameAction.PERSUASION.value),
+            ClassificationExample("convince the merchant", GameAction.PERSUASION.value),
+            ClassificationExample("negotiate with the captain", GameAction.PERSUASION.value),
+            ClassificationExample("reason with the hostile NPC", GameAction.PERSUASION.value),
+            ClassificationExample("attempt to convince them", GameAction.PERSUASION.value),
+            ClassificationExample("пытаюсь убедить стражника", GameAction.PERSUASION.value),
+            ClassificationExample("убеждаю торговца", GameAction.PERSUASION.value),
+            ClassificationExample("веду переговоры с капитаном", GameAction.PERSUASION.value),
+            ClassificationExample("пытаюсь договориться", GameAction.PERSUASION.value),
+            
+            # More MAGIC examples
+            ClassificationExample("quickly cast a healing spell", GameAction.MAGIC.value),
+            ClassificationExample("cast healing spell on companion", GameAction.MAGIC.value),
+            ClassificationExample("use magic to heal wounds", GameAction.MAGIC.value),
+            ClassificationExample("perform healing ritual", GameAction.MAGIC.value),
+            ClassificationExample("быстро кастую лечебное заклинание", GameAction.MAGIC.value),
+            ClassificationExample("использую магию исцеления", GameAction.MAGIC.value),
         ]

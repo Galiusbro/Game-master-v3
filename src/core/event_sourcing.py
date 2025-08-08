@@ -74,8 +74,34 @@ class EventStore:
         self.async_session = None
     
     def _serialize_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Serialize state for JSONB storage, handling UUIDs and other complex types"""
-        return json.loads(json.dumps(state, cls=UUIDEncoder))
+        """Serialize state for JSONB storage, handling UUIDs and other complex types, including UUID dict keys"""
+        from enum import Enum
+        from uuid import UUID
+        from datetime import datetime
+
+        def stringify(obj: Any) -> Any:
+            # Ensure dict keys are strings and values are serializable
+            if isinstance(obj, dict):
+                new_dict: Dict[str, Any] = {}
+                for k, v in obj.items():
+                    if isinstance(k, Enum):
+                        key = str(k.value)
+                    else:
+                        key = str(k)
+                    new_dict[key] = stringify(v)
+                return new_dict
+            if isinstance(obj, list):
+                return [stringify(v) for v in obj]
+            if isinstance(obj, tuple):
+                return [stringify(v) for v in obj]
+            if isinstance(obj, UUID):
+                return str(obj)
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            return obj
+
+        safe_state = stringify(state)
+        return json.loads(json.dumps(safe_state, cls=UUIDEncoder))
         
     async def connect(self) -> None:
         """Initialize connection to PostgreSQL"""

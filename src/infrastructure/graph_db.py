@@ -34,6 +34,7 @@ class GraphDatabase:
         import json
         from uuid import UUID
         from datetime import datetime
+        from enum import Enum
         
         class UUIDEncoder(json.JSONEncoder):
             def default(self, obj):
@@ -42,6 +43,27 @@ class GraphDatabase:
                 elif isinstance(obj, datetime):
                     return obj.isoformat()
                 return super().default(obj)
+
+        def stringify(obj: Any) -> Any:
+            """Recursively ensure dict keys are strings and convert special types."""
+            if isinstance(obj, dict):
+                new_dict = {}
+                for k, v in obj.items():
+                    if isinstance(k, Enum):
+                        key = str(k.value)
+                    else:
+                        key = str(k)
+                    new_dict[key] = stringify(v)
+                return new_dict
+            if isinstance(obj, list):
+                return [stringify(v) for v in obj]
+            if isinstance(obj, tuple):
+                return [stringify(v) for v in obj]
+            if isinstance(obj, UUID):
+                return str(obj)
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            return obj
         
         serialized = {}
         for key, value in props.items():
@@ -50,8 +72,9 @@ class GraphDatabase:
                 serialized[key] = str(value)
             elif isinstance(value, (dict, list)):
                 if value:  # Non-empty dict/list
-                    serialized[key] = json.dumps(value, cls=UUIDEncoder)
-                else:  # Empty dict/list - skip or set to null
+                    safe_value = stringify(value)
+                    serialized[key] = json.dumps(safe_value, cls=UUIDEncoder)
+                else:  # Empty dict/list - store as null to avoid noisy empty payloads
                     serialized[key] = None
             else:
                 serialized[key] = value
@@ -281,7 +304,7 @@ class GraphDatabase:
         query = f"""
         MATCH path = (start:Entity {{id: $start_id}})-{rel_pattern}-(connected:Entity)
         WITH DISTINCT connected, labels(connected) as labels, length(path) as path_length
-        RETURN connected, labels, path_length
+        RETURN connected AS e, labels AS labels, path_length
         ORDER BY path_length, connected.importance_level DESC, connected.created_at DESC
         LIMIT {settings.graph_traversal_max_width}
         """

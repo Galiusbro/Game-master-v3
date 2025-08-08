@@ -57,10 +57,21 @@ async def clean_all_barliman():
         print(f"   - ID: {entity.id}")
         print(f"     Описание: {entity.description[:60]}...")
         print(f"     Score: {score}")
-        if "lifeless" in entity.description.lower() or "motionless" in entity.description.lower():
-            print(f"     💀 МЕРТВЫЙ!")
-        else:
-            print(f"     😊 Живой")
+        # Use semantic entity state detection
+        try:
+            sys.path.append('src')
+            from infrastructure.command_classification_service import command_classifier
+            entity_state, state_conf = command_classifier.detect_entity_state(entity.description)
+            if entity_state == "dead" and state_conf > 0.5:
+                print(f"     💀 МЕРТВЫЙ! (семантика: {entity_state}, уверенность: {state_conf:.2f})")
+            else:
+                print(f"     😊 Живой (семантика: {entity_state}, уверенность: {state_conf:.2f})")
+        except Exception as e:
+            # Fallback to old method if semantic classification fails
+            if "lifeless" in entity.description.lower() or "motionless" in entity.description.lower():
+                print(f"     💀 МЕРТВЫЙ! (fallback)")
+            else:
+                print(f"     😊 Живой (fallback)")
         print()
     
     await vector_db.disconnect()

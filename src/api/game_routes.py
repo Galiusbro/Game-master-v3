@@ -19,6 +19,7 @@ from core.dice_engine import dice_engine
 from api.ai_routes import NPCDialogueRequest, WorldDescriptionRequest
 from infrastructure.ai_service import ai_service
 from domain.entities import EntityType, Player, AbilityScore, SkillType, CharacterClass
+from api.handlers import handle_combat, handle_skill_check, handle_resurrection, handle_magic, handle_unknown, handle_dialogue, handle_trade, handle_movement, handle_search, handle_exploration
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +50,9 @@ class GameCommandResponse(BaseModel):
     # Resolved entities
     resolved_entities: dict = {}
     
+    # Dice roll results
+    dice_rolls: list = []
+    
     # Parsing details
     parsing_confidence: float = 0.0
     original_command: str = ""
@@ -76,6 +80,69 @@ async def process_natural_command(
     logger.info(f"Processing command: '{request.command}' for player {request.player_id}")
     
     try:
+        # 0. CHECK IF PLAYER IS DEAD BEFORE PROCESSING ANY COMMAND
+        player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+        if player and player.effective_hit_points <= 0:
+            logger.info(f"💀 Player {player.name} is dead (HP: {player.effective_hit_points}). Checking for resurrection attempt.")
+            
+            # Check if player is trying to use a resurrection scroll
+            resurrection_event, resurrection_conf = command_classifier.detect_special_event(request.command)
+            
+            if resurrection_event == "resurrection_event" and resurrection_conf > 0.6:
+                logger.info(f"📜 Resurrection attempt detected! Confidence: {resurrection_conf:.2f}")
+                resurrection_result = await handle_resurrection(request, player)
+                return GameCommandResponse(**resurrection_result)
+            
+            logger.info(f"💀 No resurrection attempt. Generating death message.")
+            
+            # Generate AI response about death and resurrection scroll
+            try:
+                if ai_service.is_initialized:
+                    death_response = await ai_service.generate_death_response(
+                        player_name=player.name,
+                        player_class=player.stats.character_class.value if player.stats.character_class else "adventurer",
+                        command=request.command
+                    )
+                    content = death_response.content
+                    confidence = death_response.confidence
+                    tokens_used = death_response.tokens_used
+                    response_time = death_response.response_time
+                    event_id = death_response.event_id
+                else:
+                    # Fallback death message
+                    content = f"💀 {player.name}, you have fallen in battle. Your spirit lingers in the realm between life and death. To continue your adventure, you must acquire a Scroll of Resurrection from a powerful cleric or merchant. Your last attempt was: '{request.command}'"
+                    confidence = 1.0
+                    tokens_used = 0
+                    response_time = 0.0
+                    event_id = None
+                    
+            except Exception as e:
+                logger.warning(f"AI death response failed: {e}")
+                content = f"💀 {player.name}, you are dead. Your HP is {player.effective_hit_points}. To continue, find a Scroll of Resurrection. Your command was: '{request.command}'"
+                confidence = 1.0
+                tokens_used = 0
+                response_time = 0.0
+                event_id = None
+            
+            return GameCommandResponse(
+                success=False,
+                action_type="death",
+                content=content,
+                confidence=confidence,
+                tokens_used=tokens_used,
+                response_time=response_time,
+                resolved_entities={
+                    "player_dead": True,
+                    "player_hp": player.effective_hit_points,
+                    "player_max_hp": player.effective_max_hit_points,
+                    "resurrection_required": True
+                },
+                parsing_confidence=1.0,
+                original_command=request.command,
+                warnings=["Player is dead - resurrection required"],
+                event_id=event_id
+            )
+        
         # 1. Parse the natural language command
         parsed = await semantic_parser.parse_command(
             world_id=request.world_id,
@@ -89,35 +156,52 @@ async def process_natural_command(
         
         # 2. Route to appropriate handler based on detected action
         if parsed.action == GameAction.DIALOGUE:
-            return await _handle_dialogue(request, parsed)
+            dialogue_result = await handle_dialogue(request, parsed)
+            return GameCommandResponse(**dialogue_result)
             
         elif parsed.action == GameAction.MOVEMENT:
-            return await _handle_movement(request, parsed)
+            movement_result = await handle_movement(request, parsed)
+            return GameCommandResponse(**movement_result)
             
         elif parsed.action == GameAction.SEARCH:
-            return await _handle_search(request, parsed)
+            search_result = await handle_search(request, parsed)
+            return GameCommandResponse(**search_result)
             
         elif parsed.action == GameAction.EXPLORE:
-            return await _handle_exploration(request, parsed)
+            exploration_result = await handle_exploration(request, parsed)
+            return GameCommandResponse(**exploration_result)
             
         elif parsed.action == GameAction.TRADE:
-            return await _handle_trade(request, parsed)
+            trade_result = await handle_trade(request, parsed)
+            # If trade handler indicates it needs exploration handler, delegate to handle_exploration
+            if trade_result.get("needs_exploration_handler"):
+                exploration_result = await handle_exploration(request, parsed)
+                return GameCommandResponse(**exploration_result)
+            return GameCommandResponse(**trade_result)
             
         elif parsed.action == GameAction.COMBAT:
-            return await _handle_combat(request, parsed)
+            combat_result = await handle_combat(request, parsed)
+            return GameCommandResponse(**combat_result)
             
         elif parsed.action == GameAction.MAGIC:
-            return await _handle_magic(request, parsed)
+            magic_result = await handle_magic(request, parsed)
+            # If magic handler indicates it needs AI interpretation, delegate to handle_unknown
+            if magic_result.get("needs_ai_interpretation"):
+                unknown_result = await handle_unknown(request, parsed)
+                return GameCommandResponse(**unknown_result)
+            return GameCommandResponse(**magic_result)
             
         # Skill check actions
         elif parsed.action in [GameAction.STEALTH, GameAction.PERSUASION, GameAction.DECEPTION, 
                               GameAction.INVESTIGATION, GameAction.SLEIGHT_OF_HAND, 
                               GameAction.ATHLETICS, GameAction.PERCEPTION, GameAction.SKILL_CHECK]:
-            return await _handle_skill_check(request, parsed)
+            skill_result = await handle_skill_check(request, parsed)
+            return GameCommandResponse(**skill_result)
             
         else:
             # Unknown action - let AI try to interpret
-            return await _handle_unknown(request, parsed)
+            unknown_result = await handle_unknown(request, parsed)
+            return GameCommandResponse(**unknown_result)
     
     except HTTPException:
         # Re-raise HTTP exceptions as-is (404, 422, etc.)
@@ -126,356 +210,6 @@ async def process_natural_command(
         logger.error(f"Error processing command '{request.command}': {e}")
         raise HTTPException(status_code=500, detail=f"Command processing failed: {str(e)}")
 
-
-async def _handle_dialogue(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle dialogue with NPC"""
-    
-    if not parsed.target_npc_id:
-        # Try to find NPC through general description
-        return GameCommandResponse(
-            success=False,
-            action_type="dialogue",
-            content="I don't see anyone to talk to here. Could you be more specific about who you want to speak with?",
-            original_command=request.command,
-            warnings=["No NPC resolved from command"]
-        )
-    
-    # CHECK IF NPC IS ALIVE BEFORE DIALOGUE!
-    logger.info(f"🔍 Checking NPC status for dialogue: {parsed.target_npc_id}")
-    try:
-        from core.world_service import world_service
-        npc = await world_service.get_entity(parsed.target_npc_id, EntityType.NPC)
-        
-        if npc:
-            logger.info(f"✅ NPC found: {npc.name}, is_alive: {getattr(npc, 'is_alive', 'MISSING')}")
-            if hasattr(npc, 'is_alive') and not npc.is_alive:
-                logger.info(f"💀 Player tried to talk to dead NPC: {npc.name}")
-                return GameCommandResponse(
-                    success=True,
-                    action_type="dialogue",
-                    content=f"You approach {npc.name}, but there is no response. The lifeless body lies motionless before you - death has claimed them. No amount of words can reach them now.",
-                    original_command=request.command,
-                    warnings=[f"Cannot dialogue with deceased NPC: {npc.name}"],
-                    resolved_entities={"target_npc": npc.name}
-                )
-            else:
-                logger.info(f"✅ NPC {npc.name} is alive, proceeding with dialogue")
-        else:
-            logger.warning(f"❌ NPC {parsed.target_npc_id} not found in database")
-            return GameCommandResponse(
-                success=False,
-                action_type="dialogue", 
-                content="I don't see that person here anymore.",
-                original_command=request.command,
-                warnings=["NPC not found in database"]
-            )
-            
-    except Exception as e:
-        logger.error(f"❌ Error checking NPC status: {e}")
-        import traceback
-        logger.error(traceback.format_exc())
-        # Continue with normal dialogue as fallback
-    
-    # Create dialogue request
-    dialogue_req = NPCDialogueRequest(
-        player_id=request.player_id,
-        npc_id=parsed.target_npc_id,
-        player_message=parsed.message or "Hello",
-        situation_context="",
-        session_id=request.session_id
-    )
-    
-    # Call AI dialogue endpoint with BackgroundTasks
-    from api.ai_routes import npc_dialogue
-    from fastapi import BackgroundTasks
-    bg_tasks = BackgroundTasks()
-    ai_response = await npc_dialogue(dialogue_req, bg_tasks)
-    
-    return GameCommandResponse(
-        success=True,
-        action_type="dialogue",
-        content=ai_response.content,
-        confidence=ai_response.confidence,
-        tokens_used=ai_response.tokens_used,
-        response_time=ai_response.response_time,
-        resolved_entities={
-            "npc_id": str(parsed.target_npc_id),
-            "npc_found": True
-        },
-        parsing_confidence=parsed.confidence,
-        original_command=request.command,
-        warnings=ai_response.warnings,
-        event_id=ai_response.event_id
-    )
-
-
-async def _handle_movement(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle movement to location"""
-    
-    # Create world description request for movement
-    movement_request = f"I want to go to {parsed.intent_details.get('destination', 'somewhere')}. {request.command}"
-    
-    world_req = WorldDescriptionRequest(
-        player_id=request.player_id,
-        request=movement_request,
-        session_id=request.session_id
-    )
-    
-    # Call AI world description endpoint
-    from api.ai_routes import describe_world
-    bg_tasks = BackgroundTasks()
-    ai_response = await describe_world(world_req, bg_tasks)
-    
-    return GameCommandResponse(
-        success=True,
-        action_type="movement",
-        content=ai_response.content,
-        confidence=ai_response.confidence,
-        tokens_used=ai_response.tokens_used,
-        response_time=ai_response.response_time,
-        resolved_entities={
-            "target_location": parsed.intent_details.get('destination', 'unknown'),
-            "location_id": str(parsed.target_location_id) if parsed.target_location_id else None
-        },
-        parsing_confidence=parsed.confidence,
-        original_command=request.command
-    )
-
-
-async def _handle_search(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle search/investigation actions"""
-    
-    search_request = f"I search for {parsed.intent_details.get('target', 'something')}. {request.command}"
-    
-    world_req = WorldDescriptionRequest(
-        player_id=request.player_id,
-        request=search_request,
-        session_id=request.session_id
-    )
-    
-    from api.ai_routes import describe_world
-    bg_tasks = BackgroundTasks()
-    ai_response = await describe_world(world_req, bg_tasks)
-    
-    return GameCommandResponse(
-        success=True,
-        action_type="search",
-        content=ai_response.content,
-        confidence=ai_response.confidence,
-        tokens_used=ai_response.tokens_used,
-        response_time=ai_response.response_time,
-        resolved_entities={
-            "search_target": parsed.intent_details.get('target', 'unknown')
-        },
-        parsing_confidence=parsed.confidence,
-        original_command=request.command
-    )
-
-
-async def _handle_exploration(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle general exploration"""
-    
-    world_req = WorldDescriptionRequest(
-        player_id=request.player_id,
-        request=request.command,
-        session_id=request.session_id
-    )
-    
-    from api.ai_routes import describe_world
-    bg_tasks = BackgroundTasks()
-    ai_response = await describe_world(world_req, bg_tasks)
-    
-    return GameCommandResponse(
-        success=True,
-        action_type="exploration",
-        content=ai_response.content,
-        confidence=ai_response.confidence,
-        tokens_used=ai_response.tokens_used,
-        response_time=ai_response.response_time,
-        parsing_confidence=parsed.confidence,
-        original_command=request.command
-    )
-
-
-async def _handle_trade(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle trade/commerce actions"""
-    
-    if parsed.target_npc_id:
-        # Trade with specific NPC
-        trade_message = f"I want to {request.command}"
-        
-        dialogue_req = NPCDialogueRequest(
-            player_id=request.player_id,
-            npc_id=parsed.target_npc_id,
-            player_message=trade_message,
-            situation_context="trade",
-            session_id=request.session_id
-        )
-        
-        from api.ai_routes import npc_dialogue
-        bg_tasks = BackgroundTasks()
-        ai_response = await npc_dialogue(dialogue_req, bg_tasks)
-        
-        return GameCommandResponse(
-            success=True,
-            action_type="trade",
-            content=ai_response.content,
-            confidence=ai_response.confidence,
-            tokens_used=ai_response.tokens_used,
-            response_time=ai_response.response_time,
-            resolved_entities={"npc_id": str(parsed.target_npc_id)},
-            parsing_confidence=parsed.confidence,
-            original_command=request.command,
-            event_id=ai_response.event_id
-        )
-    else:
-        # General trade description
-        return await _handle_exploration(request, parsed)
-
-
-async def _handle_combat(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle combat actions with state mutations"""
-    
-    # For now, treat as world description with combat context
-    combat_request = f"I attempt to {request.command}"
-    
-    world_req = WorldDescriptionRequest(
-        player_id=request.player_id,
-        request=combat_request,
-        session_id=request.session_id
-    )
-    
-    from api.ai_routes import describe_world
-    bg_tasks = BackgroundTasks()
-    ai_response = await describe_world(world_req, bg_tasks)
-    
-    # Check if combat resulted in NPC death and update state
-    warnings = ["Combat system not fully implemented - using narrative description"]
-    
-    if parsed.target_npc_id:
-        # Check if player command or AI response mentions death/killing using modern classification
-        command_death_event, command_death_conf = command_classifier.detect_special_event(request.command)
-        ai_death_event, ai_death_conf = command_classifier.detect_special_event(ai_response.content)
-        
-        command_mentions_death = command_death_event == "death_event" and command_death_conf > 0.5
-        ai_mentions_death = ai_death_event == "death_event" and ai_death_conf > 0.5
-        
-        if command_mentions_death or ai_mentions_death:
-            try:
-                logger.info(f"🗡️ Death event detected! Command: {command_death_conf:.2f}, AI: {ai_death_conf:.2f}, NPC: {parsed.target_npc_id}")
-                
-                # Get the NPC entity
-                npc = await world_service.get_entity(parsed.target_npc_id, EntityType.NPC)
-                logger.info(f"📋 Retrieved NPC: {npc.name if npc else 'None'}, is_alive: {npc.is_alive if npc else 'N/A'}")
-                
-                if npc and npc.is_alive:
-                    logger.info(f"💀 Killing NPC {npc.name}...")
-                    
-                    # Update NPC state to dead
-                    npc.is_alive = False
-                    npc.current_state.current_mood = "dead"
-                    npc.current_state.current_activity = "deceased"
-                    
-                    logger.info(f"💾 Saving updated NPC state for {npc.name}...")
-                    
-                    # Save the updated NPC state
-                    updated_npc = await world_service.update_entity(
-                        entity=npc,
-                        actor_id=request.player_id,
-                        session_id=request.session_id
-                    )
-                    
-                    logger.info(f"✅ SUCCESS! NPC {npc.name} updated. New state: alive={updated_npc.is_alive}")
-                    
-                    # CREATE EVENT ENTITY FOR AI MEMORY!
-                    try:
-                        from domain.entities import Event, ActionType, ActorType
-                        from uuid import uuid4
-                        
-                        death_event = Event(
-                            id=uuid4(),
-                            name=f"Death of {npc.name}",
-                            description=f"{npc.name} was slain in combat. The tragic event occurred in the tavern, forever changing the atmosphere of the place.",
-                            action_type=ActionType.COMBAT,
-                            actor_id=request.player_id,
-                            actor_type=ActorType.PLAYER,
-                            participants=[request.player_id, npc.id],
-                            location_id=npc.current_state.current_location_id,
-                            before_state={"npc_alive": True, "combat_initiated": True},
-                            after_state={"npc_alive": False, "death_confirmed": True},
-                            session_id=request.session_id,
-                            confidence_score=1.0
-                        )
-                        
-                        # Store event in Graph DB for AI memory
-                        await world_service.create_entity(
-                            death_event,
-                            actor_id=request.player_id,
-                            session_id=request.session_id
-                        )
-                        
-                        logger.info(f"📚 Created death event entity: {death_event.id}")
-                        warnings.append(f"Death event recorded for AI memory")
-                        
-                    except Exception as e:
-                        logger.error(f"Failed to create death event: {e}")
-                        warnings.append(f"Warning: Death event not recorded - {e}")
-                    
-                    warnings.append(f"NPC {npc.name} state updated to deceased")
-                    
-                    # Override AI response if it refused to cooperate
-                    ai_content_lower = ai_response.content.lower()
-                    if "can't assist" in ai_content_lower or "sorry" in ai_content_lower:
-                        ai_response.content = f"In a tragic turn of events, {npc.name} has fallen. The tavern falls silent as the gravity of what has transpired settles over the room."
-                        warnings.append("AI response overridden due to content policy - death event processed")
-                else:
-                    logger.warning(f"⚠️ Cannot kill NPC: npc={npc}, is_alive={npc.is_alive if npc else 'N/A'}")
-                    
-            except Exception as e:
-                logger.error(f"💥 CRITICAL ERROR updating NPC state: {type(e).__name__}: {e}")
-                import traceback
-                logger.error(f"💥 Stack trace: {traceback.format_exc()}")
-                warnings.append(f"Failed to update NPC state: {e}")
-    
-    return GameCommandResponse(
-        success=True,
-        action_type="combat",
-        content=ai_response.content,
-        confidence=ai_response.confidence,
-        tokens_used=ai_response.tokens_used,
-        response_time=ai_response.response_time,
-        parsing_confidence=parsed.confidence,
-        original_command=request.command,
-        warnings=warnings,
-        event_id=ai_response.event_id
-    )
-
-
-async def _handle_unknown(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle unknown/unclear commands"""
-    
-    # Let AI try to interpret the command
-    world_req = WorldDescriptionRequest(
-        player_id=request.player_id,
-        request=f"I try to: {request.command}",
-        session_id=request.session_id
-    )
-    
-    from api.ai_routes import describe_world
-    bg_tasks = BackgroundTasks()
-    ai_response = await describe_world(world_req, bg_tasks)
-    
-    return GameCommandResponse(
-        success=True,
-        action_type="unknown",
-        content=ai_response.content,
-        confidence=ai_response.confidence * 0.5,  # Lower confidence for unknown actions
-        tokens_used=ai_response.tokens_used,
-        response_time=ai_response.response_time,
-        parsing_confidence=parsed.confidence,
-        original_command=request.command,
-        warnings=["Command action type unclear - using general interpretation"]
-    )
 
 
 @router.get("/help")
@@ -526,217 +260,6 @@ async def get_command_help():
     }
 
 
-async def _handle_magic(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle magic spells and rituals with automatic event creation"""
-    logger.info(f"🔮 Processing magic action: {parsed.raw_command}")
-    
-    # Detect resurrection magic using modern classification
-    resurrection_event, resurrection_conf = command_classifier.detect_special_event(parsed.raw_command)
-    is_resurrection = resurrection_event == "resurrection_event" and resurrection_conf > 0.5
-    
-    if is_resurrection and parsed.target_npc_id:
-        logger.info(f"✨ Resurrection spell detected! Confidence: {resurrection_conf:.2f}, NPC: {parsed.target_npc_id}")
-        
-        try:
-            from core.world_service import world_service
-            npc = await world_service.get_entity(parsed.target_npc_id, EntityType.NPC)
-            
-            if npc and hasattr(npc, 'is_alive') and not npc.is_alive:
-                logger.info(f"💀➡️😇 Resurrecting {npc.name}!")
-                
-                # RESURRECT THE NPC!
-                npc.is_alive = True
-                npc.current_state.current_mood = "confused but grateful"
-                npc.current_state.current_activity = "slowly awakening"
-                npc.description = f"A stout, cheerful man with graying hair and a welcoming smile. He looks slightly bewildered but very much alive, with a faint glow still lingering around him from recent magical revival."
-                
-                # Save the resurrection
-                updated_npc = await world_service.update_entity(
-                    entity=npc, 
-                    actor_id=request.player_id, 
-                    session_id=request.session_id
-                )
-                
-                # CREATE RESURRECTION EVENT ENTITY FOR AI MEMORY!
-                try:
-                    from domain.entities import Event, ActionType, ActorType
-                    from uuid import uuid4
-                    
-                    resurrection_event = Event(
-                        id=uuid4(),
-                        name=f"Magical Resurrection of {npc.name}",
-                        description=f"Through ancient magic and a scroll of resurrection, {npc.name} was brought back from death to life in the tavern. His soul was restored to his body by powerful magic.",
-                        action_type=ActionType.MAGIC,
-                        actor_id=request.player_id,
-                        actor_type=ActorType.PLAYER,
-                        participants=[request.player_id, npc.id],
-                        location_id=npc.current_state.current_location_id,
-                        before_state={"npc_alive": False, "spell_cast": "resurrection"},
-                        after_state={"npc_alive": True, "resurrection_successful": True},
-                        session_id=request.session_id,
-                        confidence_score=1.0
-                    )
-                    
-                    # Store event in Graph DB for AI memory
-                    await world_service.create_entity(
-                        resurrection_event,
-                        actor_id=request.player_id,
-                        session_id=request.session_id
-                    )
-                    
-                    logger.info(f"📚 Created resurrection event entity: {resurrection_event.id}")
-                    
-                except Exception as e:
-                    logger.error(f"Failed to create resurrection event: {e}")
-                
-                logger.info(f"✅ {npc.name} successfully resurrected!")
-                
-                return GameCommandResponse(
-                    success=True,
-                    action_type="magic",
-                    content=f"The scroll glows with brilliant light as ancient magic courses through {npc.name}'s lifeless form. Suddenly, his eyes flutter open and he draws a sharp, gasping breath! The color returns to his cheeks as life floods back into his body. {npc.name} sits up slowly, looking around in confusion but very much alive. 'What... what happened?' he whispers, his voice hoarse but real.",
-                    original_command=request.command,
-                    resolved_entities={"resurrected_npc": npc.name},
-                    warnings=[f"Successfully resurrected {npc.name}", "Resurrection event recorded for AI memory"]
-                )
-                
-            elif npc and getattr(npc, 'is_alive', True):
-                return GameCommandResponse(
-                    success=True,
-                    action_type="magic",
-                    content=f"You attempt to cast resurrection on {npc.name}, but the magic fizzles harmlessly - {npc.name} is already very much alive and well!",
-                    original_command=request.command,
-                    warnings=["Target is already alive"]
-                )
-            else:
-                return GameCommandResponse(
-                    success=False,
-                    action_type="magic",
-                    content="The scroll glows, but there is no suitable target for resurrection magic here.",
-                    original_command=request.command,
-                    warnings=["No dead NPC found to resurrect"]
-                )
-                
-        except Exception as e:
-            logger.error(f"Error in resurrection magic: {e}")
-            return GameCommandResponse(
-                success=False,
-                action_type="magic",
-                content="The magical energies swirl chaotically and then dissipate. Something went wrong with the spell.",
-                original_command=request.command,
-                warnings=[f"Magic failed: {str(e)}"]
-            )
-    
-    # For other magic, use general AI response
-    return await _handle_unknown(request, parsed)
-
-
-async def _handle_skill_check(request: GameCommandRequest, parsed) -> GameCommandResponse:
-    """Handle skill check actions with dice rolling"""
-    try:
-        # Get player entity
-        player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-        
-        # Resolve the action using dice engine
-        context = {
-            'time_of_day': 'day',  # TODO: Get from world state
-            'target_attitude': 'neutral'  # TODO: Determine from target NPC
-        }
-        
-        # Get target AC if it's a combat action
-        if parsed.target_npc_id:
-            target_npc = await world_service.get_entity(parsed.target_npc_id, EntityType.NPC)
-            if target_npc:
-                context['target_ac'] = 15  # TODO: Calculate from NPC stats
-        
-        # Resolve the complex action with dice rolls
-        sequence = dice_engine.resolve_complex_action(
-            actor=player,
-            action_description=request.command,
-            target_id=parsed.target_npc_id or parsed.target_item_id,
-            context=context
-        )
-        
-        # Update player in the world service
-        await world_service.update_entity(
-            entity=player,
-            actor_id=request.player_id,
-            session_id=request.session_id
-        )
-        
-        # Generate AI response based on the dice results
-        if sequence.primary_roll:
-            # Build context for AI about the dice roll
-            dice_context = f"""
-DICE ROLL RESULT:
-- Action: {sequence.action_description}
-- Roll: {sequence.primary_roll.dice_notation} = {sequence.primary_roll.total}
-- DC: {sequence.primary_roll.difficulty_class}
-- Result: {'SUCCESS' if sequence.success else 'FAILURE'}
-"""
-            
-            if sequence.primary_roll.is_critical:
-                dice_context += "- CRITICAL SUCCESS! (Natural 20)\n"
-            elif sequence.primary_roll.is_fumble:
-                dice_context += "- CRITICAL FAILURE! (Natural 1)\n"
-            
-            # Use AI service to generate narrative response
-            try:
-                if ai_service.is_initialized:
-                    ai_response = await ai_service.generate_dice_outcome_narration(
-                        dice_results=dice_context,
-                        action_description=request.command,
-                        player=player,
-                        context_entities=parsed.context_entities or []
-                    )
-                    response_content = ai_response.content
-                else:
-                    # Fallback when AI service is not available
-                    result_word = "SUCCESS" if sequence.success else "FAILURE"
-                    critical_text = ""
-                    if sequence.primary_roll.is_critical:
-                        critical_text = " with spectacular results!"
-                    elif sequence.primary_roll.is_fumble:
-                        critical_text = " with disastrous consequences!"
-                    
-                    response_content = f"🎲 {sequence.primary_roll.description}: {sequence.primary_roll.total} vs DC {sequence.primary_roll.difficulty_class} = {result_word}{critical_text}"
-            except Exception as e:
-                logger.warning(f"AI narration failed, using fallback: {e}")
-                result_word = "SUCCESS" if sequence.success else "FAILURE"
-                response_content = f"🎲 {sequence.primary_roll.description}: {sequence.primary_roll.total} vs DC {sequence.primary_roll.difficulty_class} = {result_word}"
-            
-        else:
-            response_content = f"You attempt: {request.command}. The outcome is unclear."
-        
-        return GameCommandResponse(
-            success=sequence.success,
-            action_type=parsed.action.value,
-            content=response_content,
-            confidence=sequence.primary_roll.total / 20.0 if sequence.primary_roll else 0.5,
-            tokens_used=getattr(ai_response, 'tokens_used', 0),
-            response_time=getattr(ai_response, 'response_time', 0.0),
-            resolved_entities={
-                'target_npc': str(parsed.target_npc_id) if parsed.target_npc_id else None,
-                'skill_used': sequence.primary_roll.description if sequence.primary_roll else None,
-                'dc': sequence.primary_roll.difficulty_class if sequence.primary_roll else None,
-                'roll_total': sequence.primary_roll.total if sequence.primary_roll else None
-            },
-            parsing_confidence=parsed.confidence,
-            original_command=request.command,
-            event_id=sequence.sequence_id
-        )
-        
-    except Exception as e:
-        logger.error(f"Error handling skill check: {e}")
-        return GameCommandResponse(
-            success=False,
-            action_type="skill_check",
-            content=f"You attempt: {request.command}, but something goes wrong.",
-            original_command=request.command,
-            warnings=[f"Skill check failed: {str(e)}"]
-        )
 
 
 # Character management endpoints

@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from core.world_service import world_service
 from infrastructure.ai_service import ai_service
 from domain.entities import BaseEntity, EntityType
+from core.semantic_parser import semantic_parser
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +57,25 @@ async def stream_game_command(request: StreamCommandRequest):
             try:
                 # Send initial status
                 yield format_sse_data("Starting command processing...", "status")
+                
+                # 🧠 SEMANTIC ANALYSIS - добавляем семантический парсинг!
+                yield format_sse_data("Analyzing command semantics...", "status")
+                parsed = await semantic_parser.parse_command(
+                    world_id=UUID(request.world_id),
+                    session_id=UUID(request.session_id),
+                    player_id=UUID(request.player_id),
+                    raw_command=request.command
+                )
+                
+                # Send semantic analysis as SSE event
+                semantic_data = {
+                    "action": parsed.action.value if parsed.action else "unknown",
+                    "confidence": float(parsed.confidence),  # Convert numpy float32 to Python float
+                    "target_npc": str(parsed.target_npc_id) if parsed.target_npc_id else None,
+                    "target_location": str(parsed.target_location_id) if parsed.target_location_id else None,
+                    "message": parsed.message
+                }
+                yield format_sse_data(json.dumps(semantic_data), "semantic_analysis")
                 
                 # Get relevant entities using semantic search
                 yield format_sse_data("Finding relevant entities...", "status")

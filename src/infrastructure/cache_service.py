@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from uuid import UUID
 import hashlib
 from datetime import datetime, timedelta
+from enum import Enum
 
 import redis.asyncio as redis
 from pydantic import BaseModel
@@ -100,12 +101,33 @@ class CacheService:
     
     def _serialize(self, data: Any) -> bytes:
         """Serialize data for Redis storage"""
-        if isinstance(data, BaseEntity):
-            return json.dumps(data.dict(), default=str).encode()
-        elif isinstance(data, BaseModel):
-            return json.dumps(data.dict(), default=str).encode()
-        else:
-            return json.dumps(data, default=str).encode()
+        def stringify_keys(obj: Any) -> Any:
+            """Recursively convert dict keys to strings and handle special types.
+            This prevents JSON errors like 'keys must be str, int, float, bool or None, not UUID'.
+            """
+            if isinstance(obj, dict):
+                new_dict: Dict[str, Any] = {}
+                for k, v in obj.items():
+                    if isinstance(k, Enum):
+                        new_key = str(k.value)
+                    else:
+                        new_key = str(k)
+                    new_dict[new_key] = stringify_keys(v)
+                return new_dict
+            if isinstance(obj, list):
+                return [stringify_keys(v) for v in obj]
+            if isinstance(obj, tuple):
+                return [stringify_keys(v) for v in obj]
+            if isinstance(obj, BaseModel):
+                return stringify_keys(obj.dict())
+            if isinstance(obj, UUID):
+                return str(obj)
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            return obj
+
+        payload = stringify_keys(data)
+        return json.dumps(payload, ensure_ascii=False).encode()
     
     def _deserialize(self, data: bytes, model_class: Optional[type] = None) -> Any:
         """Deserialize data from Redis"""
@@ -242,9 +264,9 @@ class CacheService:
         if entity_type == EntityType.PLAYER:
             await self.delete_pattern(f"player:{entity_id}:*")
     
-    async def get_vector_search(self, query: str, entity_types: Optional[List[EntityType]] = None, limit: int = 10) -> Optional[List]:
+    async def get_vector_search(self, query: str, entity_types: Optional[List[EntityType]] = None, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Optional[List]:
         """Get cached vector search results"""
-        query_hash = self._make_hash(query)
+        query_hash = self._make_hash({"q": query, "filters": filters or {}})
         types_str = ",".join(sorted([t.value for t in entity_types])) if entity_types else "all"
         
         key = CacheKey.VECTOR_SEARCH.format(
@@ -291,9 +313,9 @@ class CacheService:
             logger.warning(f"Failed to deserialize vector search cache: {e}")
             return None
     
-    async def set_vector_search(self, query: str, entity_types: Optional[List[EntityType]], limit: int, results: List) -> bool:
+    async def set_vector_search(self, query: str, entity_types: Optional[List[EntityType]], limit: int, results: List, filters: Optional[Dict[str, Any]] = None) -> bool:
         """Cache vector search results"""
-        query_hash = self._make_hash(query)
+        query_hash = self._make_hash({"q": query, "filters": filters or {}})
         types_str = ",".join(sorted([t.value for t in entity_types])) if entity_types else "all"
         
         key = CacheKey.VECTOR_SEARCH.format(

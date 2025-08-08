@@ -146,7 +146,7 @@ class SmartContextBuilder:
             seen_entities.add(interaction_target.id)
         
         # 3. Get current location and its context
-        if player.current_location_id:
+        if getattr(player, 'current_location_id', None):
             try:
                 current_location = await world_service.get_entity(player.current_location_id, EntityType.LOCATION)
                 if current_location and current_location.id not in seen_entities:
@@ -155,11 +155,15 @@ class SmartContextBuilder:
                     seen_entities.add(current_location.id)
                     
                     # Get entities in current location via graph traversal
-                    location_context = await world_service.get_entity_context(
-                        player.current_location_id,
-                        max_depth=1,  # Only immediate connections
-                        entity_types=[EntityType.NPC, EntityType.ITEM]
-                    )
+                    try:
+                        location_context = await world_service.get_entity_context(
+                            player.current_location_id,
+                            max_depth=1,  # Only immediate connections
+                            entity_types=[EntityType.NPC, EntityType.ITEM]
+                        )
+                    except Exception as e:
+                        logger.warning(f"Failed to get current location context: {e}")
+                        location_context = []
                     
                     for entity in location_context:
                         if entity.id not in seen_entities:
