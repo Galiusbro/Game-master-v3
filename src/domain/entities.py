@@ -95,6 +95,19 @@ class CharacterClass(str, Enum):
     WIZARD = "wizard"
 
 
+class Race(str, Enum):
+    """D&D 5e common races"""
+    HUMAN = "human"
+    ELF = "elf"
+    DWARF = "dwarf"
+    HALFLING = "halfling"
+    GNOME = "gnome"
+    HALF_ORC = "half_orc"
+    HALF_ELF = "half_elf"
+    TIEFLING = "tiefling"
+    DRAGONBORN = "dragonborn"
+
+
 class DiceRollType(str, Enum):
     """Types of dice rolls"""
     ABILITY_CHECK = "ability_check"
@@ -352,6 +365,7 @@ class NPCState(BaseModel):
 class NPC(BaseEntity):
     """Non-player character entity"""
     type: EntityType = EntityType.NPC
+    race: Race = Race.HUMAN
     personality: NPCPersonality = Field(default_factory=NPCPersonality)
     current_state: NPCState = Field(default_factory=NPCState)
     is_alive: bool = True

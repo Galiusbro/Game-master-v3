@@ -299,6 +299,24 @@ class WorldService:
                 enriched_results.append((full_entity, score))
         
         return enriched_results
+
+    async def index_docs(self, docs: List[Tuple[str, str, str, List[str]]]) -> int:
+        """Index RAG documents into the docs collection.
+
+        docs: list of (doc_id, title, text, tags)
+        returns number of indexed docs
+        """
+        count = 0
+        for doc_id, title, text, tags in docs:
+            try:
+                await vector_db.store_doc(doc_id=doc_id, title=title, text=text, tags=tags)
+                count += 1
+            except Exception as e:
+                logger.warning(f"Failed to index doc {doc_id}: {e}")
+        return count
+
+    async def search_docs(self, query: str, limit: int = 5, tags: Optional[List[str]] = None):
+        return await vector_db.search_docs(query=query, limit=limit, tags=tags)
     
     async def get_entity_context(
         self,

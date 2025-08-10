@@ -11,7 +11,12 @@ from fastapi import BackgroundTasks
 from api.ai_routes import NPCDialogueRequest, npc_dialogue
 from infrastructure.command_classification_service import command_classifier
 from core.world_service import world_service
-from domain.entities import EntityType
+from domain.entities import EntityType, SkillType
+from core.dice_engine import dice_engine
+from core.social_checks import (
+    is_on_social_cooldown,
+)
+from core.social_engine.engine import social_engine
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +24,8 @@ logger = logging.getLogger(__name__)
 async def handle_dialogue(request, parsed) -> dict:
     """Handle dialogue with NPC"""
     
+    mechanics_info = None
+
     if not parsed.target_npc_id:
         # Try to resolve NPC via semantic search as a graceful fallback
         try:
@@ -88,27 +95,74 @@ async def handle_dialogue(request, parsed) -> dict:
         logger.error(traceback.format_exc())
         # Continue with normal dialogue as fallback
     
-    # Detect social intent (e.g., befriend) and update relationship if needed
+    # Detect social intent (e.g., befriend) and run social check if needed
     try:
         intent, intent_conf = command_classifier.classify_social_intent(request.command)
-        if intent == "befriend" and intent_conf >= 0.5:
-            # Update NPC relationship_to_player -> 'friendly'
-            # Note: relationship_to_player expects string UUID keys in JSON persistence
-            if npc and hasattr(npc, 'current_state') and npc.current_state:
-                # Ensure dict exists
-                relationship_map = getattr(npc.current_state, 'relationship_to_player', None)
-                if relationship_map is None:
-                    npc.current_state.relationship_to_player = {}
-                    relationship_map = npc.current_state.relationship_to_player
-                # Keep UUID key in-memory (Pydantic-typed); storage layers stringify keys safely
-                relationship_map[request.player_id] = "friendly"
-                # Persist via world service (no external API)
-                await world_service.update_entity(
-                    entity=npc,
-                    actor_id=request.player_id,
-                    session_id=request.session_id
+        logger.info(f"Social intent detected: intent={intent}, confidence={intent_conf:.3f} for command='{request.command}'")
+        if intent == "befriend" and intent_conf >= 0.35 and npc:
+            # Load player for skill bonuses and location checks
+            player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+
+            # Hard blockers: same location and NPC is alive checked above
+            if player and getattr(player, 'current_location_id', None) and getattr(npc.current_state, 'current_location_id', None):
+                if player.current_location_id != npc.current_state.current_location_id:
+                    return {
+                        "success": False,
+                        "action_type": "dialogue",
+                        "content": "Тут никого похожего нет. Попробуй найти нужного человека в подходящем месте.",
+                        "original_command": request.command,
+                        "warnings": ["Different location: cannot befriend out of proximity"],
+                    }
+
+            # Cooldown check
+            if is_on_social_cooldown(npc, request.player_id):
+                return {
+                    "success": False,
+                    "action_type": "dialogue",
+                    "content": f"Сейчас не лучшее время. Попробуй чуть позже.",
+                    "original_command": request.command,
+                    "warnings": ["Social cooldown active"],
+                }
+
+            # Run social engine (thin wrapper around existing mechanics)
+            mechanics_info = await social_engine.run_social_check(
+                intent="befriend",
+                player=player,
+                npc=npc,
+                message=request.command,
+            )
+
+            # Sync relationship label based on thresholds using returned disposition
+            new_score = mechanics_info.get("new_disposition", 0)
+            if new_score >= 50:
+                npc.current_state.relationship_to_player[request.player_id] = "friendly"
+            elif new_score <= -50:
+                npc.current_state.relationship_to_player[request.player_id] = "hostile"
+
+            # Persist via world service
+            await world_service.update_entity(
+                entity=npc,
+                actor_id=request.player_id,
+                session_id=request.session_id,
+            )
+
+            # Log summary
+            try:
+                roll = mechanics_info.get("roll", {})
+                logger.info(
+                    f"🤝 Social check (Persuasion): DC {mechanics_info.get('dc')}, roll {roll.get('total')} "
+                    f"({'success' if roll.get('success') else 'fail'}), disposition delta {mechanics_info.get('disposition_delta')} -> {new_score}"
                 )
-                logger.info(f"🤝 Set relationship_to_player[{request.player_id}] = friendly for NPC {npc.id}")
+            except Exception:
+                pass
+
+            # Prepare mechanics info for response
+            try:
+                relationship_label = npc.current_state.compute_relationship_for_player(request.player_id)
+            except Exception:
+                relationship_label = npc.current_state.relationship_to_player.get(request.player_id, "neutral")
+
+            mechanics_info["relationship"] = relationship_label
     except Exception as e:
         logger.warning(f"Failed to process social intent: {e}")
 
@@ -139,5 +193,6 @@ async def handle_dialogue(request, parsed) -> dict:
         "parsing_confidence": parsed.confidence,
         "original_command": request.command,
         "warnings": ai_response.warnings,
+        "dice_rolls": ([mechanics_info] if mechanics_info else []),
         "event_id": ai_response.event_id
     }

@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     qdrant_host: str = Field(default="localhost", env="QDRANT_HOST")
     qdrant_port: int = Field(default=6333, env="QDRANT_PORT")
     qdrant_collection_name: str = Field(default="gamemaster_world", env="QDRANT_COLLECTION_NAME")
+    qdrant_docs_collection_name: str = Field(default="gamemaster_docs", env="QDRANT_DOCS_COLLECTION_NAME")
     
     # Cache (Redis)
     redis_host: str = Field(default="localhost", env="REDIS_HOST")

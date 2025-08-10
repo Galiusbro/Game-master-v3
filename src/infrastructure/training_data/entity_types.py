@@ -47,6 +47,17 @@ class EntityTypeTrainingData:
             ClassificationExample("у официанта спросить меню", EntityType.NPC.value),
             ClassificationExample("об официанте шутят", EntityType.NPC.value),
             ClassificationExample("нет официанта поблизости", EntityType.NPC.value),
+            # Охрана / guard (русские формы)
+            ClassificationExample("охранник стоит на посту", EntityType.NPC.value),
+            ClassificationExample("со стражником разговаривают", EntityType.NPC.value),
+            ClassificationExample("к охраннику обратиться", EntityType.NPC.value),
+            ClassificationExample("у стражника спросить дорогу", EntityType.NPC.value),
+            ClassificationExample("о стражнике ходят слухи", EntityType.NPC.value),
+            ClassificationExample("нет охранника поблизости", EntityType.NPC.value),
+            # English guard variants
+            ClassificationExample("guard stands watch", EntityType.NPC.value),
+            ClassificationExample("talk to the guard", EntityType.NPC.value),
+            ClassificationExample("ask the guard for directions", EntityType.NPC.value),
             ClassificationExample("кузнец кует оружие", EntityType.NPC.value),
             ClassificationExample("торговец показывает товары", EntityType.NPC.value),
             ClassificationExample("стражник патрулирует улицы", EntityType.NPC.value),

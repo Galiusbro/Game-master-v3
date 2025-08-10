@@ -25,6 +25,7 @@ class VectorDatabase:
         self.client: Optional[AsyncQdrantClient] = None
         self.encoder: Optional[SentenceTransformer] = None
         self.collection_name = settings.qdrant_collection_name
+        self.docs_collection_name = getattr(settings, 'qdrant_docs_collection_name', 'gamemaster_docs')
         self.host = settings.qdrant_host
         self.port = settings.qdrant_port
         self.vector_size = 384  # all-MiniLM-L6-v2 dimension
@@ -63,18 +64,27 @@ class VectorDatabase:
         try:
             collections = await self.client.get_collections()
             collection_names = [c.name for c in collections.collections]
-            
+
+            to_create = []
             if self.collection_name not in collection_names:
+                to_create.append(self.collection_name)
+            if self.docs_collection_name not in collection_names:
+                to_create.append(self.docs_collection_name)
+
+            for cname in to_create:
                 await self.client.create_collection(
-                    collection_name=self.collection_name,
+                    collection_name=cname,
                     vectors_config=models.VectorParams(
                         size=self.vector_size,
                         distance=models.Distance.COSINE,
                     ),
                 )
-                logger.info(f"Created Qdrant collection: {self.collection_name}")
-            else:
+                logger.info(f"Created Qdrant collection: {cname}")
+
+            if self.collection_name in collection_names:
                 logger.info(f"Using existing Qdrant collection: {self.collection_name}")
+            if self.docs_collection_name in collection_names:
+                logger.info(f"Using existing Qdrant collection: {self.docs_collection_name}")
                 
         except ResponseHandlingException as e:
             logger.error(f"Failed to ensure collection exists: {e}")
@@ -120,10 +130,13 @@ class VectorDatabase:
         if hasattr(entity, 'item_type'):
             text_parts.append(f"Item type: {entity.item_type.value}")
         
-        # Add metadata
+        # Add metadata (strings and short lists)
         for key, value in entity.metadata.items():
             if isinstance(value, str):
                 text_parts.append(f"{key}: {value}")
+            elif isinstance(value, list) and value and isinstance(value[0], str):
+                sample = ", ".join(value[:8])
+                text_parts.append(f"{key}: {sample}")
         
         return " | ".join(text_parts)
     
@@ -157,11 +170,26 @@ class VectorDatabase:
             if hasattr(npc, 'current_state') and npc.current_state:
                 payload["current_mood"] = npc.current_state.current_mood
                 payload["current_location_id"] = str(npc.current_state.current_location_id) if npc.current_state.current_location_id else None
+            # Useful filters
+            if isinstance(entity.metadata, dict):
+                roles = entity.metadata.get("roles")
+                if isinstance(roles, list):
+                    payload["roles"] = roles
+                caps = entity.metadata.get("capabilities")
+                if isinstance(caps, dict):
+                    payload["capability_keys"] = list(caps.keys())
         
         elif entity.type == EntityType.LOCATION:
             location = entity
             payload["is_safe"] = getattr(location, 'is_safe', True)
             payload["exploration_level"] = getattr(location, 'exploration_level', 0)
+            if isinstance(entity.metadata, dict):
+                lk = entity.metadata.get("location_kind")
+                if isinstance(lk, str):
+                    payload["location_kind"] = lk
+                biome = entity.metadata.get("primary_biome")
+                if isinstance(biome, str):
+                    payload["biome"] = biome
         
         elif entity.type == EntityType.ITEM:
             item = entity
@@ -185,6 +213,45 @@ class VectorDatabase:
             payload["confidence_score"] = getattr(event, 'confidence_score', 1.0)
         
         return payload
+
+    async def store_doc(self, doc_id: str, title: str, text: str, tags: Optional[List[str]] = None) -> None:
+        """Store a design/lore document chunk into docs collection."""
+        embedding = self._encode_text(text)
+        # Qdrant expects numeric or UUID IDs; map doc_id to a UUID5
+        from uuid import uuid5, NAMESPACE_URL
+        safe_id = str(uuid5(NAMESPACE_URL, doc_id))
+        payload = {
+            "doc_id": doc_id,
+            "title": title,
+            "tags": tags or [],
+            "collection": "docs",
+        }
+        point = models.PointStruct(id=safe_id, vector=embedding, payload=payload)
+        await self.client.upsert(collection_name=self.docs_collection_name, points=[point])
+        logger.debug(f"Stored doc in vector DB: {doc_id}")
+
+    async def search_docs(self, query: str, limit: int = 5, tags: Optional[List[str]] = None) -> List[Tuple[Dict[str, Any], float]]:
+        """Search in docs collection and return payloads with scores."""
+        query_embedding = self._encode_text(query)
+
+        must_conditions = []
+        if tags:
+            must_conditions.append(
+                models.FieldCondition(key="tags", match=models.MatchAny(any=tags))
+            )
+        search_filter = models.Filter(must=must_conditions) if must_conditions else None
+
+        search_result = await self.client.search(
+            collection_name=self.docs_collection_name,
+            query_vector=query_embedding,
+            query_filter=search_filter,
+            limit=limit,
+        )
+
+        results: List[Tuple[Dict[str, Any], float]] = []
+        for point in search_result:
+            results.append((point.payload or {}, point.score))
+        return results
     
     async def store_entity(self, entity: BaseEntity) -> None:
         """Store entity in vector database"""

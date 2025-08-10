@@ -12,6 +12,8 @@ from api.ai_routes import router as ai_router
 from api.game_routes import router as game_router
 from api.streaming_routes import router as streaming_router
 from core.world_service import world_service
+from core.enrichment.demographics import enrich_city_demographics
+from core.worldgen import generate_world
 from infrastructure.cache_service import cache_service
 from domain.entities import (
     ActorType, BaseEntity, EntityType, Player, NPC, Location, Item, Event, Quest
@@ -52,6 +54,16 @@ class SearchRequest(BaseModel):
     include_context: bool = False
 
 
+class DocsIndexRequest(BaseModel):
+    docs: List[dict]  # {id, title, text, tags?}
+
+
+class DocsSearchRequest(BaseModel):
+    query: str
+    limit: int = 5
+    tags: Optional[List[str]] = None
+
+
 class CreateRelationshipRequest(BaseModel):
     from_entity_id: UUID
     to_entity_id: UUID
@@ -69,6 +81,13 @@ class EntityResponse(BaseModel):
 class SearchResultResponse(BaseModel):
     entity: dict
     score: float
+class WorldGenRequest(BaseModel):
+    """Parameters for world generation (MVP)."""
+    seed: Optional[str] = None
+    grid_size: Optional[int] = None
+    water_ratio: Optional[float] = None
+    mountain_density: Optional[float] = None
+
 
 
 class SnapshotResponse(BaseModel):
@@ -276,6 +295,40 @@ async def search_entities(request: SearchRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# RAG Docs endpoints
+@router.post("/rag/docs/index")
+async def index_docs(request: DocsIndexRequest):
+    try:
+        docs_payload = []
+        for d in request.docs:
+            doc_id = str(d.get("id"))
+            title = d.get("title", "")
+            text = d.get("text", "")
+            tags = d.get("tags", [])
+            docs_payload.append((doc_id, title, text, tags))
+        count = await world_service.index_docs(docs_payload)
+        return {"indexed": count}
+    except Exception as e:
+        logger.error(f"Docs index failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/rag/docs/search")
+async def search_docs(request: DocsSearchRequest):
+    try:
+        results = await world_service.search_docs(query=request.query, limit=request.limit, tags=request.tags)
+        return [
+            {
+                "payload": payload,
+                "score": score,
+            }
+            for payload, score in results
+        ]
+    except Exception as e:
+        logger.error(f"Docs search failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/entities/{entity_id}/context", response_model=List[EntityResponse])
 async def get_entity_context(
     entity_id: UUID,
@@ -446,6 +499,31 @@ async def get_recent_changes(
     except Exception as e:
         logger.error(f"Failed to get recent changes: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# World generation endpoint (MVP)
+@router.post("/world/generate")
+async def generate_world_endpoint(req: WorldGenRequest):
+    """Generate a minimal macro world and return summary."""
+    try:
+        summary = await generate_world({k: v for k, v in req.dict().items() if v is not None})
+        return {"success": True, "summary": summary}
+    except Exception as e:
+        logger.error(f"World generation failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/world/enrich/demographics")
+async def enrich_demographics(seed: Optional[str] = None, max_npcs_per_city: int = 100):
+    """Enrich world with race distributions and assign NPC races based on biomes.
+    Requires the world to be generated first.
+    """
+    try:
+        result = await enrich_city_demographics(seed or "gmv3", max_npcs_per_city=max_npcs_per_city)
+        return {"success": True, "result": result}
+    except Exception as e:
+        logger.error(f"Demographics enrichment failed: {e}")
+        return {"success": False, "error": str(e)}
 
 
 @router.get("/cache/stats")

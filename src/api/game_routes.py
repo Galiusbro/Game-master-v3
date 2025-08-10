@@ -153,9 +153,19 @@ async def process_natural_command(
         )
         
         logger.info(f"Parsed action: {parsed.action}, confidence: {parsed.confidence}")
+
+        # 1.5 Social intent override: route befriending attempts via dialogue handler
+        try:
+            social_intent, social_conf = command_classifier.classify_social_intent(request.command)
+        except Exception:
+            social_intent, social_conf = None, 0.0
+        if social_intent == "befriend" and social_conf >= 0.5:
+            dialogue_result = await handle_dialogue(request, parsed)
+            return GameCommandResponse(**dialogue_result)
         
         # 2. Route to appropriate handler based on detected action
-        if parsed.action == GameAction.DIALOGUE:
+        # All conversational/social actions go through dialogue handler
+        if parsed.action in [GameAction.DIALOGUE, GameAction.PERSUASION, GameAction.DECEPTION, GameAction.PERFORMANCE, GameAction.INTIMIDATION]:
             dialogue_result = await handle_dialogue(request, parsed)
             return GameCommandResponse(**dialogue_result)
             
@@ -192,9 +202,9 @@ async def process_natural_command(
             return GameCommandResponse(**magic_result)
             
         # Skill check actions
-        elif parsed.action in [GameAction.STEALTH, GameAction.PERSUASION, GameAction.DECEPTION, 
-                              GameAction.INVESTIGATION, GameAction.SLEIGHT_OF_HAND, 
-                              GameAction.ATHLETICS, GameAction.PERCEPTION, GameAction.SKILL_CHECK]:
+        elif parsed.action in [GameAction.STEALTH, GameAction.INVESTIGATION, 
+                              GameAction.SLEIGHT_OF_HAND, GameAction.ATHLETICS, 
+                              GameAction.PERCEPTION, GameAction.SKILL_CHECK]:
             skill_result = await handle_skill_check(request, parsed)
             return GameCommandResponse(**skill_result)
             
