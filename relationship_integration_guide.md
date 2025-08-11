@@ -153,8 +153,7 @@ CURRENT SITUATION:
 PLAYER ACTION: {player_action}
 
 Respond as {npc_name} would, staying true to their personality and the provided context. Format your response as direct dialogue.""",
-        max_tokens=1200,
-        temperature=0.8
+        max_completion_tokens=1200,
     )
 }
 ```

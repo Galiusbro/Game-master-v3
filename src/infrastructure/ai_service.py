@@ -37,8 +37,7 @@ class PromptTemplate(BaseModel):
     """Template for AI prompts"""
     system_prompt: str
     user_template: str
-    max_tokens: int = 1000
-    temperature: float = 0.7
+    max_completion_tokens: int = 1000
     anti_hallucination_instructions: str = ""
 
 
@@ -77,8 +76,7 @@ CURRENT SITUATION:
 PLAYER ACTION: {player_action}
 
 Respond as {npc_name} would, staying true to their personality and the provided context. Format your response as direct dialogue.""",
-                max_tokens=1200,
-                temperature=0.8,
+                max_completion_tokens=1200,
                 anti_hallucination_instructions="Only reference entities, locations, and facts explicitly mentioned in the provided context. Do not invent new information."
             ),
             
@@ -115,8 +113,7 @@ PLAYER REQUEST: {request}
 {dice_context}
 
 Craft a masterful, immersive description that brings this scene to life. Layer rich sensory details and character-specific insights while remaining absolutely faithful to the provided context. Make this moment unforgettable.""",
-                max_tokens=1000,
-                temperature=0.7,
+                max_completion_tokens=1000,
                 anti_hallucination_instructions="Describe only elements explicitly mentioned in context. Use character expertise to highlight relevant details, but never invent new information."
             ),
             
@@ -145,8 +142,7 @@ CHARACTER INFO:
 ACTION ATTEMPTED: {action_description}
 
 Narrate what happens as a result of this dice roll. Be vivid and engaging while respecting the success/failure outcome.""",
-                max_tokens=800,
-                temperature=0.8,
+                max_completion_tokens=800,
                 anti_hallucination_instructions="Only describe outcomes consistent with the dice results and established context. Do not invent new world elements."
             ),
             
@@ -172,8 +168,7 @@ RELEVANT CONTEXT:
 {context}
 
 Determine the outcome of this action, explaining the reasoning and any consequences.""",
-                max_tokens=900,
-                temperature=0.6,
+                max_completion_tokens=900,
                 anti_hallucination_instructions="Base outcomes only on provided character stats, world rules, and context. Do not invent new mechanics or rules."
             ),
             
@@ -198,8 +193,7 @@ LAST ATTEMPTED ACTION: {command}
 
 As the Game Master, respond to this dead player who is trying to continue their adventure. 
 Explain their current state, the need for a Scroll of Resurrection, and maintain the immersive fantasy atmosphere.""",
-                max_tokens=600,
-                temperature=0.7,
+                max_completion_tokens=600,
                 anti_hallucination_instructions="Only mention Scroll of Resurrection as the revival method. Do not invent other resurrection mechanics."
             ),
             
@@ -225,8 +219,7 @@ RESURRECTION ACTION: {command}
 
 As the Game Master, describe the miraculous resurrection process as {player_name} returns to life through the power of the scroll. 
 Make this moment feel epic, meaningful, and atmospheric while confirming their return to the world of the living.""",
-                max_tokens=700,
-                temperature=0.8,
+                max_completion_tokens=700,
                 anti_hallucination_instructions="Focus on the scroll's power and the character's resurrection. Do not invent new world elements."
             )
         }
@@ -271,7 +264,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             response = await self.client.chat.completions.create(
                 model=settings.llm_model,
                 messages=[{"role": "user", "content": "Test connection"}],
-                max_tokens=10
+                max_completion_tokens=10
             )
             logger.info("OpenAI API connection successful")
         except Exception as e:
@@ -301,13 +294,12 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         breakdown["total"] = total
         return breakdown
     
-    def _create_context_hash(self, messages: List[Dict], temperature: float, max_tokens: int) -> str:
+    def _create_context_hash(self, messages: List[Dict], max_completion_tokens: int) -> str:
         """Create a hash for AI request context for caching"""
         context_data = {
             "messages": messages,
             "model": settings.llm_model,
-            "temperature": temperature,
-            "max_tokens": max_tokens
+            "max_completion_tokens": max_completion_tokens
         }
         
         # Create a stable hash
@@ -576,7 +568,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             messages = self._optimize_context_messages(messages, int(settings.context_max_tokens * 0.95))
         
         # Check cache first
-        context_hash = self._create_context_hash(messages, template.temperature, template.max_tokens)
+        context_hash = self._create_context_hash(messages, template.max_completion_tokens)
         cached_response = await self._get_cached_response(context_hash)
         if cached_response:
             return cached_response
@@ -586,8 +578,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             response = await self.client.chat.completions.create(
                 model=settings.llm_model,
                 messages=messages,
-                max_tokens=template.max_tokens,
-                temperature=template.temperature
+                max_completion_tokens=template.max_completion_tokens,
             )
             
             content = response.choices[0].message.content
@@ -707,7 +698,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             messages = self._optimize_context_messages(messages, int(settings.context_max_tokens * 0.95))
         
         # Check cache first
-        context_hash = self._create_context_hash(messages, template.temperature, template.max_tokens)
+        context_hash = self._create_context_hash(messages, template.max_completion_tokens)
         cached_response = await self._get_cached_response(context_hash)
         if cached_response:
             return cached_response
@@ -716,8 +707,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             response = await self.client.chat.completions.create(
                 model=settings.llm_model,
                 messages=messages,
-                max_tokens=template.max_tokens,
-                temperature=template.temperature
+                max_completion_tokens=template.max_completion_tokens,
             )
             
             content = response.choices[0].message.content
@@ -806,8 +796,7 @@ Armor Class: {player.stats.armor_class}
                     {"role": "system", "content": template.system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=template.max_tokens,
-                temperature=template.temperature
+                max_completion_tokens=template.max_completion_tokens,
             )
             
             content = response.choices[0].message.content
@@ -872,8 +861,7 @@ Armor Class: {player.stats.armor_class}
                     {"role": "system", "content": template.system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=template.max_tokens,
-                temperature=template.temperature
+                max_completion_tokens=template.max_completion_tokens,
             )
             
             content = response.choices[0].message.content
@@ -930,8 +918,7 @@ Armor Class: {player.stats.armor_class}
                     {"role": "system", "content": template.system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                max_tokens=template.max_tokens,
-                temperature=template.temperature
+                max_completion_tokens=template.max_completion_tokens,
             )
             
             content = response.choices[0].message.content
@@ -984,7 +971,7 @@ Armor Class: {player.stats.armor_class}
         ]
         
         # Check cache first
-        context_hash = self._create_context_hash(messages, template.temperature, template.max_tokens)
+        context_hash = self._create_context_hash(messages, template.max_completion_tokens)
         cached_response = await self._get_cached_response(context_hash)
         if cached_response:
             logger.info("Streaming cached NPC dialogue response")
@@ -1034,7 +1021,7 @@ Armor Class: {player.stats.armor_class}
         ]
         
         # Check cache first
-        context_hash = self._create_context_hash(messages, template.temperature, template.max_tokens)
+        context_hash = self._create_context_hash(messages, template.max_completion_tokens)
         cached_response = await self._get_cached_response(context_hash)
         if cached_response:
             logger.info("Streaming cached world description")
@@ -1058,6 +1045,72 @@ Armor Class: {player.stats.armor_class}
         except Exception as e:
             logger.warning(f"Failed to cache streaming response: {e}")
     
+    async def ensure_initialized(self) -> bool:
+        """Ensure AI service is initialized, initialize if needed"""
+        if not self.is_initialized:
+            try:
+                await self.initialize()
+                return True
+            except Exception as e:
+                logger.error(f"Failed to initialize AI service: {e}")
+                return False
+        return True
+
+    async def generate_completion(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        max_completion_tokens: int = 1000,
+    ) -> AIResponse:
+        """Generate a simple completion for general use cases like world generation"""
+        if not await self.ensure_initialized():
+            return AIResponse(
+                content="AI service not available",
+                confidence=0.0,
+                tokens_used=0,
+                response_time=0.0,
+                warnings=["AI service initialization failed"]
+            )
+        
+        start_time = time.time()
+        
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        try:
+            response = await self.client.chat.completions.create(
+                model=settings.llm_model,
+                messages=messages,
+                max_completion_tokens=max_completion_tokens,
+            )
+            
+            content = response.choices[0].message.content
+            tokens_used = response.usage.total_tokens if response.usage else 0
+            response_time = time.time() - start_time
+            
+            return AIResponse(
+                content=content,
+                confidence=0.8,  # Default confidence for general completions
+                tokens_used=tokens_used,
+                response_time=response_time,
+                hallucination_detected=False,
+                cited_entities=[],
+                warnings=[]
+            )
+            
+        except Exception as e:
+            logger.error(f"Completion generation failed: {e}")
+            return AIResponse(
+                content="Failed to generate content.",
+                confidence=0.0,
+                tokens_used=0,
+                response_time=time.time() - start_time,
+                hallucination_detected=True,
+                warnings=[f"Generation failed: {str(e)}"]
+            )
+
     async def _stream_openai_response(
         self,
         messages: List[Dict],
@@ -1075,8 +1128,7 @@ Armor Class: {player.stats.armor_class}
             stream = await self.client.chat.completions.create(
                 model=settings.llm_model,
                 messages=messages,
-                max_tokens=template.max_tokens,
-                temperature=template.temperature,
+                max_completion_tokens=template.max_completion_tokens,
                 stream=True
             )
             

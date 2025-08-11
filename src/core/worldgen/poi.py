@@ -10,6 +10,7 @@ import random
 from typing import Any, Dict, List, Tuple
 
 from core.worldgen.utils import create_location_entity, link_to_parent
+from core.world_service import world_service
 
 
 def _clamp01(x: float) -> float:
@@ -42,6 +43,9 @@ async def generate_basic_poi(
                 "hook_tags": hooks,
             }
             
+            # Safety rules for POI
+            is_safe_value = None if kind not in ("ruin", "lair") else False
+            
             created_p = await create_location_entity(
                 name=f"{kind.title()} near {str(s['id'])[:6]}",
                 description=f"A {kind.replace('_', ' ')}",
@@ -50,6 +54,7 @@ async def generate_basic_poi(
                 center=[du, dv],
                 metadata=metadata,
                 actor_id=s["id"],  # Use settlement as actor
+                is_safe=is_safe_value,
             )
             created.append(str(created_p.id))
             # Link to settlement using utils

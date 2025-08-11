@@ -128,6 +128,14 @@ async def create_continent_entities(
             actor_id=world_id,
         )
         continent_ids.append(str(created_continent.id))
+        # Link continent to world (graph edge)
+        await link_to_parent(
+            child_id=created_continent.id,
+            parent_id=world_id,
+            relationship_type="LOCATED_IN",
+            properties=None,
+            actor_id=world_id,
+        )
         
         # Store info for further processing
         continents_info.append({
@@ -195,6 +203,14 @@ async def create_sea_entities(
             actor_id=world_id,
         )
         sea_ids.append(str(created_sea.id))
+        # Link sea to world (graph edge)
+        await link_to_parent(
+            child_id=created_sea.id,
+            parent_id=world_id,
+            relationship_type="LOCATED_IN",
+            properties=None,
+            actor_id=world_id,
+        )
         
         # Store info for further processing
         seas_info.append({

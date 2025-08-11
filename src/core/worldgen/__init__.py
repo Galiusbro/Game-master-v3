@@ -33,6 +33,7 @@ from .politics import generate_countries_and_laws
 from .npc_generator import generate_basic_npcs
 from .bosses import generate_bosses
 from .encounters import attach_region_encounters
+from .ai_enrichment_service import ai_world_enrichment_service
 
 # Utility modules for common functionality
 from .utils import (
@@ -69,6 +70,7 @@ __all__ = [
     "generate_basic_npcs",
     "generate_bosses",
     "attach_region_encounters",
+    "ai_world_enrichment_service",
     
     # Geographic engines
     "generate_fractal_noise",

@@ -13,6 +13,8 @@ from api.game_routes import router as game_router
 from api.streaming_routes import router as streaming_router
 from core.world_service import world_service
 from core.enrichment.demographics import enrich_city_demographics
+from pathlib import Path
+import json
 from core.worldgen import generate_world
 from infrastructure.cache_service import cache_service
 from domain.entities import (
@@ -87,6 +89,12 @@ class WorldGenRequest(BaseModel):
     grid_size: Optional[int] = None
     water_ratio: Optional[float] = None
     mountain_density: Optional[float] = None
+    enable_ai_enrichment: Optional[bool] = True
+
+
+class WorldEnrichRequest(BaseModel):
+    """Parameters for AI enrichment of existing world."""
+    world_id: str
 
 
 
@@ -513,16 +521,301 @@ async def generate_world_endpoint(req: WorldGenRequest):
         return {"success": False, "error": str(e)}
 
 
+@router.post("/world/enrich")
+async def enrich_world_endpoint(req: WorldEnrichRequest):
+    """Apply AI enrichment to an existing world."""
+    try:
+        from core.worldgen.ai_enrichment_service import ai_world_enrichment_service
+        
+        # Verify world exists
+        world_entity = await world_service.get_entity(UUID(req.world_id), EntityType.LOCATION)
+        if not world_entity:
+            raise HTTPException(status_code=404, detail="World not found")
+        
+        # Check if already enriched
+        if world_entity.metadata and world_entity.metadata.get('enriched_by_ai'):
+            logger.warning(f"World {req.world_id} already AI enriched, re-enriching...")
+        
+        # Build summary from existing world data
+        summary = await _build_world_summary_from_existing(req.world_id)
+        
+        # Apply AI enrichment
+        logger.info(f"Starting AI enrichment for world {req.world_id}")
+        enriched_summary = await ai_world_enrichment_service.enrich_world_batch(summary, req.world_id)
+        
+        return {
+            "success": True, 
+            "message": f"World {req.world_id} successfully enriched with AI",
+            "summary": enriched_summary
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"World enrichment failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
+async def _build_world_summary_from_existing(world_id: str) -> dict:
+    """Build world summary from existing entities in the database."""
+    try:
+        # 1) Verify world exists
+        world_entity = await world_service.get_entity(UUID(world_id), EntityType.LOCATION)
+        if not world_entity:
+            raise ValueError(f"World {world_id} not found")
+
+        # 2) Load all locations and build ancestry index
+        all_locations = await world_service.get_entities_by_type(EntityType.LOCATION, limit=100000)
+        loc_by_id = {str(ent.id): ent for ent in all_locations}
+
+        def belongs_to_world(ent_id: str) -> bool:
+            if ent_id == world_id:
+                return False  # skip the world node itself in children sets
+            seen = 0
+            current = ent_id
+            while seen < 16:
+                ent = loc_by_id.get(current)
+                if not ent or not getattr(ent, "metadata", None):
+                    return False
+                parent = ent.metadata.get("parent_id")
+                if not parent:
+                    return False
+                if str(parent) == str(world_id):
+                    return True
+                current = str(parent)
+                seen += 1
+            return False
+
+        # 3) Collect locations strictly under this world
+        summary: dict = {
+            "continents": [],
+            "seas": [],
+            "regions": [],
+            "rivers": [],
+            "cities": [],
+            "towns": [],
+            "villages": [],
+            "roads": [],
+            "districts": [],
+            "streets": [],
+            "buildings": [],
+            "poi": [],
+            "countries": [],
+            "npcs": [],
+            "bosses": [],
+            "npc_races": {},
+            "world_id": world_id,
+        }
+
+        for ent_id, ent in loc_by_id.items():
+            if not belongs_to_world(ent_id):
+                continue
+            kind = (ent.metadata or {}).get("location_kind", "")
+            if kind == "continent":
+                summary["continents"].append(ent_id)
+            elif kind in ("sea", "ocean"):
+                summary["seas"].append(ent_id)
+            elif kind == "region":
+                summary["regions"].append(ent_id)
+            elif kind == "river":
+                summary["rivers"].append(ent_id)
+            elif kind == "city":
+                summary["cities"].append(ent_id)
+            elif kind == "town":
+                summary["towns"].append(ent_id)
+            elif kind == "village":
+                summary["villages"].append(ent_id)
+            elif kind == "road":
+                summary["roads"].append(ent_id)
+            elif kind == "district":
+                summary["districts"].append(ent_id)
+            elif kind == "street":
+                summary["streets"].append(ent_id)
+            elif kind == "building":
+                summary["buildings"].append(ent_id)
+            elif kind == "poi":
+                summary["poi"].append(ent_id)
+            elif kind == "country":
+                summary["countries"].append(ent_id)
+
+        # 4) Collect NPCs whose location is in this world's locations
+        location_keys = [
+            "continents","seas","regions","rivers","cities","towns","villages",
+            "roads","districts","streets","buildings","poi","countries"
+        ]
+        location_ids: set[str] = set()
+        for key in location_keys:
+            ids = summary.get(key, [])
+            if isinstance(ids, list):
+                location_ids.update(ids)
+        if location_ids:
+            all_npcs = await world_service.get_entities_by_type(EntityType.NPC, limit=200000)
+            for npc in all_npcs:
+                loc_id = None
+                try:
+                    if hasattr(npc, "current_state") and getattr(npc.current_state, "current_location_id", None):
+                        loc_id = str(npc.current_state.current_location_id)
+                    elif npc.metadata:
+                        loc_id = npc.metadata.get("home_building_id") or npc.metadata.get("home_location_id")
+                    if loc_id and str(loc_id) in location_ids:
+                        if npc.metadata and npc.metadata.get("threat_level", 0) >= 8:
+                            summary["bosses"].append(str(npc.id))
+                        else:
+                            summary["npcs"].append(str(npc.id))
+                except Exception:
+                    continue
+
+        # 5) De-duplicate while preserving order
+        def _uniq(seq):
+            return list(dict.fromkeys(seq))
+        for key in [
+            "continents","seas","regions","rivers","cities","towns","villages",
+            "roads","districts","streets","buildings","poi","countries","npcs","bosses"
+        ]:
+            summary[key] = _uniq(summary[key])
+
+        logger.info(
+            f"Built summary for world {world_id}: "
+            f"{len(summary['continents'])} continents, "
+            f"{len(summary['regions'])} regions, "
+            f"{len(summary['cities'])} cities, "
+            f"{len(summary['npcs'])} NPCs"
+        )
+
+        return summary
+        
+    except Exception as e:
+        logger.error(f"Failed to build world summary: {e}")
+        raise
+
+
 @router.post("/world/enrich/demographics")
-async def enrich_demographics(seed: Optional[str] = None, max_npcs_per_city: int = 100):
+async def enrich_demographics(
+    seed: Optional[str] = None,
+    world_id: Optional[str] = None,
+    include_towns: bool = False,
+    max_npcs_per_settlement: int = 100,
+):
     """Enrich world with race distributions and assign NPC races based on biomes.
     Requires the world to be generated first.
     """
     try:
-        result = await enrich_city_demographics(seed or "gmv3", max_npcs_per_city=max_npcs_per_city)
+        result = await enrich_city_demographics(
+            seed or "gmv3",
+            world_id=world_id,
+            include_towns=include_towns,
+            max_npcs_per_settlement=max_npcs_per_settlement,
+        )
         return {"success": True, "result": result}
     except Exception as e:
         logger.error(f"Demographics enrichment failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@router.get("/world/{world_id}/export")
+async def export_world(world_id: UUID, max_depth: int = 6, include_npcs: bool = True, save: bool = True):
+    """Export all locations (and NPCs optionally) belonging to a world into a JSON file.
+
+    Traverses the graph from the `world_id` down to depth and collects location IDs,
+    then filters NPCs whose current_location_id (or home_* id) belongs to that set.
+    """
+    try:
+        # Approach: scan all locations and filter by ancestry up to world_id via parent_id chain
+        world_entity = await world_service.get_entity(world_id)
+        if not world_entity:
+            return {"success": False, "error": "world not found"}
+
+        all_locations = await world_service.get_entities_by_type(EntityType.LOCATION, limit=100000)
+        # Build quick index for ancestry traversal
+        loc_by_id = {str(e.id): e for e in all_locations}
+
+        def location_belongs_to_world(ent_id: str) -> bool:
+            # Walk up via parent_id until root or world_id
+            seen = 0
+            current_id = ent_id
+            while seen < 12:  # safe guard
+                ent = loc_by_id.get(current_id)
+                if not ent:
+                    return False
+                pid = (ent.metadata or {}).get("parent_id")
+                if not pid:
+                    return False
+                if str(pid) == str(world_id):
+                    return True
+                current_id = str(pid)
+                seen += 1
+            return False
+
+        locations = [e for e in all_locations if location_belongs_to_world(str(e.id))]
+        location_ids = {str(e.id) for e in locations}
+
+        # Collect NPCs optionally
+        npcs = []
+        if include_npcs:
+            all_npcs = await world_service.get_entities_by_type(EntityType.NPC, limit=100000)
+            for npc in all_npcs:
+                try:
+                    loc_id = getattr(getattr(npc, "current_state", None), "current_location_id", None)
+                    in_world = False
+                    if loc_id and str(loc_id) in location_ids:
+                        in_world = True
+                    else:
+                        md = npc.metadata or {}
+                        for key in ("home_building_id", "home_district_id", "home_city_id"):
+                            hid = md.get(key)
+                            if hid and str(hid) in location_ids:
+                                in_world = True
+                                break
+                    if in_world:
+                        npcs.append(npc)
+                except Exception:
+                    continue
+
+        def _jsonify(obj):
+            if isinstance(obj, (str, int, float, bool)) or obj is None:
+                return obj
+            try:
+                from uuid import UUID
+                from datetime import datetime
+                if isinstance(obj, UUID):
+                    return str(obj)
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+            except Exception:
+                pass
+            if isinstance(obj, dict):
+                return {k: _jsonify(v) for k, v in obj.items()}
+            if isinstance(obj, list):
+                return [_jsonify(v) for v in obj]
+            if hasattr(obj, 'dict'):
+                return _jsonify(obj.dict())
+            return str(obj)
+
+        export_obj = {
+            "world_id": str(world_id),
+            "counts": {
+                "locations": len(locations),
+                "npcs": len(npcs),
+            },
+            "locations": [_jsonify(loc) for loc in locations],
+            "npcs": [_jsonify(e) for e in npcs],
+        }
+
+        saved_path = None
+        if save:
+            export_dir = Path(__file__).resolve().parents[2] / "world_exports"
+            export_dir.mkdir(parents=True, exist_ok=True)
+            saved_path = export_dir / f"world_{world_id}.json"
+            with saved_path.open("w", encoding="utf-8") as f:
+                json.dump(_jsonify(export_obj), f, ensure_ascii=False, indent=2)
+
+        return {
+            "success": True,
+            "saved_path": str(saved_path) if saved_path else None,
+            "counts": export_obj["counts"],
+        }
+    except Exception as e:
+        logger.error(f"World export failed: {e}")
         return {"success": False, "error": str(e)}
 
 

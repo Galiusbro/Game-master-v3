@@ -12,7 +12,7 @@ Provides shared functions for:
 from typing import Any, Dict, List, Optional
 
 from core.world_service import world_service
-from domain.entities import BaseEntity, EntityType
+from domain.entities import BaseEntity, EntityType, Location
 
 
 async def create_location_entity(
@@ -23,6 +23,7 @@ async def create_location_entity(
     center: List[float],
     metadata: Optional[Dict[str, Any]] = None,
     actor_id: Any = None,
+    is_safe: Optional[bool] = None,
 ) -> BaseEntity:
     """Create a location entity with standard structure.
     
@@ -47,11 +48,11 @@ async def create_location_entity(
     if metadata:
         base_metadata.update(metadata)
     
-    entity = BaseEntity(
-        type=EntityType.LOCATION,
+    entity = Location(
         name=name,
         description=description,
         metadata=base_metadata,
+        is_safe=is_safe if is_safe is not None else True,
     )
     
     return await world_service.create_entity(entity=entity, actor_id=actor_id)
@@ -80,6 +81,18 @@ async def link_to_parent(
         properties=properties,
         actor_id=actor_id,
     )
+    # Also create a reverse traversal edge for convenience
+    try:
+        reverse_type = "CONTAINS" if relationship_type == "LOCATED_IN" else f"HAS_{relationship_type}"
+        await world_service.create_relationship(
+            from_entity_id=parent_id,
+            to_entity_id=child_id,
+            relationship_type=reverse_type,
+            properties=None,
+            actor_id=actor_id,
+        )
+    except Exception:
+        pass
 
 
 def normalize_coordinates(x: int, y: int, grid_size: int) -> List[float]:

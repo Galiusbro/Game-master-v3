@@ -22,9 +22,9 @@ class Settings(BaseSettings):
     
     # LLM Configuration
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    llm_model: str = Field(default="gpt-4o", env="MAIN_MODEL")  # Better quality model
+    llm_model: str = Field(default="gpt-4.1-nano", env="MAIN_MODEL")  # Better quality model
     llm_max_tokens: int = Field(default=8000, env="LLM_MAX_TOKENS")  # More tokens for quality
-    llm_temperature: float = Field(default=0.7, env="LLM_TEMPERATURE")
+    # llm_temperature: float = Field(default=0.7, env="LLM_TEMPERATURE")
     
     # Graph Database (Neo4j)
     neo4j_uri: str = Field(default="bolt://localhost:7687", env="NEO4J_URI")

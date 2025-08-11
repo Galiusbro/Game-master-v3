@@ -53,7 +53,7 @@
 **Implementation**:
 
 - Use faster models for simple tasks
-- GPT-4o-mini for simple descriptions
+- GPT-gpt-4.1-nano for simple descriptions
 - GPT-4 only for complex reasoning
 
 ### 6. **Parallel Processing**

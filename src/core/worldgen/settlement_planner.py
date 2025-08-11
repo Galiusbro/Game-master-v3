@@ -19,6 +19,7 @@ from core.worldgen.utils import (
     generate_age_range,
     get_safety_rating,
 )
+from core.world_service import world_service
 from core.worldgen.constants import POPULATION_RANGES, AGE_RANGES
 from core.worldgen.classifiers import get_trade_specialization, get_road_terrain
 
@@ -228,6 +229,9 @@ async def create_road_network(
             "toll_required": rng.random() < 0.2,
         }
         
+        # Mark unsafe if low safety
+        is_safe_value = None if safety >= 0.5 else False
+        
         created_road = await create_location_entity(
             name=f"Road {str(capital['id'])[:6]}-{str(town['id'])[:6]}",
             description=f"A {terrain} road connecting capital to town",
@@ -236,6 +240,7 @@ async def create_road_network(
             center=[(cu + tu) / 2, (cv + tv) / 2],  # Road center
             metadata=metadata,
             actor_id=world_actor_id,
+            is_safe=is_safe_value,
         )
         created_road_ids.append(str(created_road.id))
         

@@ -43,6 +43,7 @@ from core.worldgen.bosses import generate_bosses
 from core.worldgen.encounters import attach_region_encounters
 from core.worldgen.region_generator import generate_all_regions
 from core.worldgen.continent_sea_generator import generate_continents_and_seas
+from core.worldgen.ai_enrichment_service import ai_world_enrichment_service
 from domain.entities import BaseEntity, EntityType
 
 
@@ -55,6 +56,7 @@ class WorldGenParams:
     grid_size: int = 256
     water_ratio: float = 0.65
     mountain_density: float = 0.4
+    enable_ai_enrichment: bool = True
 
 
 # ----------------------------- Helper routines ---------------------------- #
@@ -81,6 +83,7 @@ async def generate_world(params: WorldGenParams | Dict[str, Any]) -> Dict[str, A
             grid_size=int(params.get("grid_size", 256)),
             water_ratio=float(params.get("water_ratio", 0.65)),
             mountain_density=float(params.get("mountain_density", 0.4)),
+            enable_ai_enrichment=bool(params.get("enable_ai_enrichment", True)),
         )
 
     rng = _rng(params.seed)
@@ -230,6 +233,20 @@ async def generate_world(params: WorldGenParams | Dict[str, Any]) -> Dict[str, A
 
     # 14) Encounter tables for regions (MVP)
     await attach_region_encounters(regions_by_continent, rng)
+
+    # 15) AI ENRICHMENT - Batch process all entities for rich descriptions and lore
+    if params.enable_ai_enrichment:
+        print("🎨 Starting AI world enrichment phase...")
+        try:
+            summary = await ai_world_enrichment_service.enrich_world_batch(summary, str(world.id))
+            print("✅ AI enrichment completed successfully!")
+        except Exception as e:
+            print(f"⚠️ AI enrichment failed, continuing with basic world: {e}")
+            # Continue without enrichment - world is still functional
+            summary["ai_enrichment"] = {"enriched": False, "error": str(e)}
+    else:
+        print("⏭️ AI enrichment disabled, using basic descriptions")
+        summary["ai_enrichment"] = {"enriched": False, "reason": "disabled"}
 
     summary["world_id"] = str(world.id)
     summary["sea_level"] = sea_level

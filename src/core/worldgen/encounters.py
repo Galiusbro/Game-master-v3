@@ -57,8 +57,16 @@ async def attach_region_encounters(
                 biome = reg.get("biome", "plains")
                 entries = _region_encounters_for_biome(biome)
                 entity.metadata.setdefault("encounter_table", {})
-                entity.metadata["encounter_table"]["roll_chance"] = round(0.25 + rng.random() * 0.15, 2)
+                base = 0.2
+                if biome in ("swamp", "mountains", "desert"):
+                    base = 0.35
+                elif biome in ("forest",):
+                    base = 0.3
+                entity.metadata["encounter_table"]["roll_chance"] = round(base + rng.random() * 0.1, 2)
                 entity.metadata["encounter_table"]["entries"] = entries
+                # Mark unsafe for dangerous biomes
+                if biome in ("swamp", "mountains", "desert"):
+                    entity.is_safe = False  # type: ignore[attr-defined]
                 await world_service.update_entity(entity, actor_id=entity.id)
             except Exception:
                 continue
