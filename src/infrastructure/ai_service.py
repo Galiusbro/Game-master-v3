@@ -44,11 +44,13 @@ class PromptTemplate(BaseModel):
 class AIService:
     """Central AI service for Game Master operations"""
     
-    def __init__(self):
-        self.client = None
-        self.tokenizer = None
+    def __init__(self) -> None:
+        # openai.AsyncOpenAI instance after initialize(); accessed dynamically
+        self.client: Any = None
+        self.tokenizer: Optional[tiktoken.Encoding] = None
         self.is_initialized = False
-        self.cache_service = None
+        # CacheService instance after initialize() (imported lazily)
+        self.cache_service: Any = None
         
         # Prompt templates
         self.templates = {
@@ -271,17 +273,17 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             logger.error(f"OpenAI API connection failed: {e}")
             raise
     
-    def count_tokens(self, text: str) -> int:
-        """Count tokens in text"""
+    def count_tokens(self, text: str) -> float:
+        """Count tokens in text (float: the no-tokenizer path is an estimate)"""
         if not self.tokenizer:
             # Rough estimation if tokenizer not available
             return len(text.split()) * 1.3
         return len(self.tokenizer.encode(text))
-    
-    def analyze_prompt_tokens(self, messages: List[Dict]) -> Dict[str, int]:
+
+    def analyze_prompt_tokens(self, messages: List[Dict[str, str]]) -> Dict[str, float]:
         """Analyze token usage breakdown in prompt"""
-        breakdown = {}
-        total = 0
+        breakdown: Dict[str, float] = {}
+        total = 0.0
         
         for msg in messages:
             role = msg.get("role", "unknown")
@@ -294,7 +296,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         breakdown["total"] = total
         return breakdown
     
-    def _create_context_hash(self, messages: List[Dict], max_completion_tokens: int) -> str:
+    def _create_context_hash(self, messages: List[Dict[str, str]], max_completion_tokens: int) -> str:
         """Create a hash for AI request context for caching"""
         context_data = {
             "messages": messages,
@@ -337,10 +339,10 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         except Exception as e:
             logger.warning(f"AI cache set error: {e}")
     
-    def _optimize_context_messages(self, messages: List[Dict], target_tokens: int) -> List[Dict]:
+    def _optimize_context_messages(self, messages: List[Dict[str, str]], target_tokens: int) -> List[Dict[str, str]]:
         """Smart context optimization preserving quality"""
         optimized = []
-        current_tokens = 0
+        current_tokens = 0.0
         
         # Always keep system prompts (they're usually small and critical)
         for msg in messages:
@@ -369,7 +371,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         logger.info(f"Smart context optimized: {self.analyze_prompt_tokens(messages)['total']} -> {self.analyze_prompt_tokens(optimized)['total']} tokens")
         return optimized
     
-    def _smart_truncate_context(self, content: str, available_tokens: int) -> str:
+    def _smart_truncate_context(self, content: str, available_tokens: float) -> str:
         """Smart context truncation preserving important information"""
         parts = content.split("CONTEXT:")
         if len(parts) < 2:
@@ -405,7 +407,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         
         # Build optimized context
         optimized_context = ""
-        used_tokens = 0
+        used_tokens = 0.0
         
         # Add important lines first
         for line in important_lines:
@@ -435,7 +437,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         logger.info(f"Smart truncation: preserved {used_tokens}/{self.count_tokens(context_part)} context tokens")
         return result
     
-    def _truncate_text_smartly(self, text: str, available_tokens: int) -> str:
+    def _truncate_text_smartly(self, text: str, available_tokens: float) -> str:
         """Smart text truncation preserving sentence structure"""
         if self.count_tokens(text) <= available_tokens:
             return text
@@ -513,7 +515,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         
         return hallucination_detected, warnings
     
-    @track_ai_operation("npc_dialogue", settings.llm_model)
+    @track_ai_operation("npc_dialogue", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
     async def generate_npc_dialogue(
         self,
         npc: NPC,
@@ -619,7 +621,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
                 warnings=[f"AI generation failed: {str(e)}"]
             )
     
-    @track_ai_operation("world_description", settings.llm_model)
+    @track_ai_operation("world_description", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
     async def generate_world_description(
         self,
         player: Player,
@@ -637,23 +639,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         
         logger.info(f"Building world context with {len(context_entities)} entities:")
         
-        # Add hardcoded dead Barliman to context
-        barliman_id = "76afb2a3-894b-4d64-b430-2eb3c2aff980"
-        barliman_in_context = any(str(entity.id) == barliman_id for entity in context_entities)
-        
-        if barliman_in_context:
-            logger.info("🪦 Adding dead Barliman to world context")
-            context_parts.append("Npc: Barliman Butterbur (DECEASED)")
-            context_parts.append("Description: The lifeless body of the former innkeeper lies motionless on the tavern floor. His cheerful smile is gone forever, replaced by the cold stillness of death. Blood stains the wooden boards beneath him.")
-            context_parts.append("Status: This NPC has died and cannot speak or interact. Their corpse is a grim reminder of recent violence.")
-            context_parts.append("")
-            entities_parts.append("- Barliman Butterbur (deceased npc)")
-        
         for entity in context_entities:
-            # Skip Barliman since we handled him above
-            if str(entity.id) == barliman_id:
-                continue
-                
             logger.debug(f"  - {entity.type.value}: {entity.name}")
             
             # Special handling for dead NPCs (for future cases)
@@ -747,7 +733,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
                 warnings=[f"Generation failed: {str(e)}"]
             )
     
-    @track_ai_operation("dice_outcome", settings.llm_model)
+    @track_ai_operation("dice_outcome", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
     async def generate_dice_outcome_narration(
         self,
         dice_results: str,
@@ -832,7 +818,7 @@ Armor Class: {player.stats.armor_class}
                 warnings=[f"Generation failed: {str(e)}"]
             )
     
-    @track_ai_operation("death_response", settings.llm_model)
+    @track_ai_operation("death_response", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
     async def generate_death_response(
         self,
         player_name: str,
@@ -889,7 +875,7 @@ Armor Class: {player.stats.armor_class}
                 warnings=[f"Generation failed: {str(e)}"]
             )
     
-    @track_ai_operation("resurrection_response", settings.llm_model)
+    @track_ai_operation("resurrection_response", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
     async def generate_resurrection_response(
         self,
         player_name: str,
@@ -976,7 +962,7 @@ Armor Class: {player.stats.armor_class}
         if cached_response:
             logger.info("Streaming cached NPC dialogue response")
             # Stream cached response word by word for consistent UX
-            words = cached_response.split()
+            words = cached_response.content.split()
             for i, word in enumerate(words):
                 yield word + (" " if i < len(words) - 1 else "")
                 await asyncio.sleep(0.05)  # Simulate typing speed
@@ -991,7 +977,16 @@ Armor Class: {player.stats.armor_class}
         
         # Cache the complete response
         try:
-            await self._set_cached_response(context_hash, response_text)
+            if response_text:
+                await self._cache_response(
+                    context_hash,
+                    AIResponse(
+                        content=response_text,
+                        confidence=0.9,
+                        tokens_used=0,
+                        response_time=0.0,
+                    ),
+                )
         except Exception as e:
             logger.warning(f"Failed to cache streaming response: {e}")
     
@@ -1026,7 +1021,7 @@ Armor Class: {player.stats.armor_class}
         if cached_response:
             logger.info("Streaming cached world description")
             # Stream cached response word by word
-            words = cached_response.split()
+            words = cached_response.content.split()
             for i, word in enumerate(words):
                 yield word + (" " if i < len(words) - 1 else "")
                 await asyncio.sleep(0.03)  # Slightly faster for descriptions
@@ -1041,7 +1036,16 @@ Armor Class: {player.stats.armor_class}
         
         # Cache the complete response
         try:
-            await self._set_cached_response(context_hash, response_text)
+            if response_text:
+                await self._cache_response(
+                    context_hash,
+                    AIResponse(
+                        content=response_text,
+                        confidence=0.9,
+                        tokens_used=0,
+                        response_time=0.0,
+                    ),
+                )
         except Exception as e:
             logger.warning(f"Failed to cache streaming response: {e}")
     
@@ -1113,7 +1117,7 @@ Armor Class: {player.stats.armor_class}
 
     async def _stream_openai_response(
         self,
-        messages: List[Dict],
+        messages: List[Dict[str, str]],
         template: PromptTemplate
     ) -> AsyncIterator[str]:
         """Stream response from OpenAI API"""

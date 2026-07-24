@@ -6,7 +6,7 @@ and routes them to appropriate AI endpoints.
 """
 
 import logging
-from typing import Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -33,7 +33,7 @@ class GameCommandRequest(BaseModel):
     player_id: UUID
     command: str
     player_name: Optional[str] = None  # For convenience, can resolve to player_id
-    dialogue_context: Optional[dict] = None  # Context for dialogue continuation
+    dialogue_context: Optional[Dict[str, Any]] = None  # Context for dialogue continuation
 
 
 class GameCommandResponse(BaseModel):
@@ -48,17 +48,17 @@ class GameCommandResponse(BaseModel):
     response_time: float = 0.0
     
     # Resolved entities
-    resolved_entities: dict = {}
-    
+    resolved_entities: Dict[str, Any] = {}
+
     # Dice roll results
-    dice_rolls: list = []
+    dice_rolls: List[Any] = []
     
     # Parsing details
     parsing_confidence: float = 0.0
     original_command: str = ""
     
     # Additional context
-    warnings: list = []
+    warnings: List[Any] = []
     event_id: Optional[UUID] = None
 
 
@@ -66,7 +66,7 @@ class GameCommandResponse(BaseModel):
 async def process_natural_command(
     request: GameCommandRequest,
     background_tasks: BackgroundTasks
-):
+) -> GameCommandResponse:
     """
     Process natural language game command
     
@@ -107,7 +107,7 @@ async def process_natural_command(
                     confidence = death_response.confidence
                     tokens_used = death_response.tokens_used
                     response_time = death_response.response_time
-                    event_id = death_response.event_id
+                    event_id = None  # AIResponse carries no event id; death events are logged by world_service
                 else:
                     # Fallback death message
                     content = f"💀 {player.name}, you have fallen in battle. Your spirit lingers in the realm between life and death. To continue your adventure, you must acquire a Scroll of Resurrection from a powerful cleric or merchant. Your last attempt was: '{request.command}'"
@@ -223,7 +223,7 @@ async def process_natural_command(
 
 
 @router.get("/help")
-async def get_command_help():
+async def get_command_help() -> Dict[str, Any]:
     """Get help about natural language commands"""
     return {
         "supported_actions": [
@@ -282,12 +282,12 @@ class CharacterCreationRequest(BaseModel):
     """Request to create a new character"""
     name: str
     character_class: CharacterClass
-    ability_scores: dict  # {"strength": 15, "dexterity": 14, etc.}
+    ability_scores: Dict[str, Any]  # {"strength": 15, "dexterity": 14, etc.}
     background: str = "Custom"
     
 
 @router.post("/character/create", response_model=GameCommandResponse)
-async def create_character(request: CharacterCreationRequest):
+async def create_character(request: CharacterCreationRequest) -> GameCommandResponse:
     """Create a new D&D character"""
     try:
         from domain.entities import PlayerStats
@@ -364,7 +364,7 @@ async def create_character(request: CharacterCreationRequest):
 
 
 @router.get("/character/{player_id}/stats")
-async def get_character_stats(player_id: UUID):
+async def get_character_stats(player_id: UUID) -> Dict[str, Any]:
     """Get character statistics"""
     try:
         player = await world_service.get_entity(player_id, EntityType.PLAYER)

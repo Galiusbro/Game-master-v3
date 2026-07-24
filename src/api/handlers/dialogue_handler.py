@@ -5,6 +5,7 @@ Handles dialogue with NPCs
 """
 
 import logging
+from typing import Any, TYPE_CHECKING
 
 from fastapi import BackgroundTasks
 
@@ -18,10 +19,17 @@ from core.social_checks import (
 )
 from core.social_engine.engine import social_engine
 
+if TYPE_CHECKING:
+    # Imported for type annotations only (runtime import would be circular).
+    from api.game_routes import GameCommandRequest
+    from core.semantic_parser import ParsedCommand
+
 logger = logging.getLogger(__name__)
 
 
-async def handle_dialogue(request, parsed) -> dict:
+async def handle_dialogue(
+    request: "GameCommandRequest", parsed: "ParsedCommand"
+) -> dict[str, Any]:
     """Handle dialogue with NPC"""
     
     mechanics_info = None
@@ -178,6 +186,11 @@ async def handle_dialogue(request, parsed) -> dict:
     # Call AI dialogue endpoint with BackgroundTasks
     bg_tasks = BackgroundTasks()
     ai_response = await npc_dialogue(dialogue_req, bg_tasks)
+
+    # We are outside the FastAPI response cycle here, so the framework will
+    # never run these tasks for us — execute them explicitly (AI interaction
+    # logging used to be silently dropped at this point).
+    await bg_tasks()
     
     return {
         "success": True,

@@ -5,7 +5,7 @@ Handles skill check actions with dice rolling
 """
 
 import logging
-from typing import List, Optional
+from typing import Any, List, Optional, TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -15,10 +15,17 @@ from core.world_service import world_service
 from domain.entities import EntityType
 from infrastructure.ai_service import ai_service
 
+if TYPE_CHECKING:
+    # Imported for type annotations only (runtime import would be circular).
+    from api.game_routes import GameCommandRequest
+    from core.semantic_parser import ParsedCommand
+
 logger = logging.getLogger(__name__)
 
 
-async def handle_skill_check(request, parsed) -> dict:
+async def handle_skill_check(
+    request: "GameCommandRequest", parsed: "ParsedCommand"
+) -> dict[str, Any]:
     """Handle skill check actions with dice rolling"""
     try:
         # Get player entity
@@ -27,7 +34,7 @@ async def handle_skill_check(request, parsed) -> dict:
             raise HTTPException(status_code=404, detail="Player not found")
         
         # Resolve the action using dice engine
-        context = {
+        context: dict[str, Any] = {
             'time_of_day': 'day',  # TODO: Get from world state
             'target_attitude': 'neutral'  # Now determined semantically in semantic_parser.py
         }
@@ -54,6 +61,12 @@ async def handle_skill_check(request, parsed) -> dict:
         )
         
         # Generate AI response based on the dice results
+        # BUG FIX (typing): ai_response must be initialized before the branches below.
+        # Previously, when the AI service was unavailable (or narration failed), the
+        # fallback paths left `ai_response` unbound and the getattr() calls in the
+        # return statement raised NameError, turning every non-AI skill check into
+        # the generic error response. (Same fix as in combat_handler.)
+        ai_response = None
         if sequence.primary_roll:
             # Build context for AI about the dice roll
             dice_context = f"""

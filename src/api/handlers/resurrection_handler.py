@@ -5,16 +5,22 @@ Handles resurrection scroll usage
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional, TYPE_CHECKING
 
 from core.world_service import world_service
 from domain.entities import Player
 from infrastructure.ai_service import ai_service
 
+if TYPE_CHECKING:
+    # Imported for type annotations only (runtime import would be circular).
+    from api.game_routes import GameCommandRequest
+
 logger = logging.getLogger(__name__)
 
 
-async def handle_resurrection(request, player: Player) -> dict:
+async def handle_resurrection(
+    request: "GameCommandRequest", player: Player
+) -> dict[str, Any]:
     """Handle resurrection scroll usage"""
     try:
         logger.info(f"📜 Processing resurrection for {player.name}")
@@ -45,7 +51,10 @@ async def handle_resurrection(request, player: Player) -> dict:
                 confidence = ai_response.confidence
                 tokens_used = ai_response.tokens_used
                 response_time = ai_response.response_time
-                event_id = ai_response.event_id
+                # BUG FIX (typing): AIResponse has no `event_id` attribute; the old
+                # `ai_response.event_id` raised AttributeError and silently discarded
+                # the generated AI narration (fell through to the except-fallback).
+                event_id = None
             else:
                 # Fallback resurrection message
                 content = f"✨ The scroll glows with divine light as {player.name} is restored to life! Your HP is fully restored to {new_hp}. The adventure continues!"

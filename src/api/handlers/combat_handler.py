@@ -5,7 +5,7 @@ Handles combat actions with dice rolling and state mutations
 """
 
 import logging
-from typing import List, Optional
+from typing import Any, List, Optional, TYPE_CHECKING
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -16,10 +16,17 @@ from domain.entities import EntityType
 from infrastructure.ai_service import ai_service
 from infrastructure.command_classification_service import command_classifier
 
+if TYPE_CHECKING:
+    # Imported for type annotations only (runtime import would be circular).
+    from api.game_routes import GameCommandRequest
+    from core.semantic_parser import ParsedCommand
+
 logger = logging.getLogger(__name__)
 
 
-async def handle_combat(request, parsed) -> dict:
+async def handle_combat(
+    request: "GameCommandRequest", parsed: "ParsedCommand"
+) -> dict[str, Any]:
     """Handle combat actions with dice rolling and state mutations"""
     warnings = []  # Initialize warnings list at the beginning
     try:
@@ -85,6 +92,7 @@ async def handle_combat(request, parsed) -> dict:
         )
         
         # Generate AI response based on combat dice results
+        ai_response = None
         if sequence.primary_roll:
             dice_context = f"""
                 COMBAT ROLL RESULT:
