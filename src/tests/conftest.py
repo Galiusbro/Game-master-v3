@@ -13,6 +13,18 @@ from unittest.mock import AsyncMock, MagicMock
 from faker import Faker
 import factory
 
+# Allow the suite to run without torch/sentence-transformers installed
+# (CI and local runs without the ML stack): stub the module before any
+# project import pulls it in. The classification service degrades to
+# keyword mode by design when embeddings are unavailable.
+import sys
+try:  # pragma: no cover
+    import sentence_transformers  # noqa: F401
+except ImportError:  # pragma: no cover
+    _st_stub = MagicMock()
+    _st_stub.SentenceTransformer = MagicMock
+    sys.modules["sentence_transformers"] = _st_stub
+
 # Test imports
 from config.settings import Settings
 from core.world_service import WorldService
@@ -103,20 +115,46 @@ def mock_event_store():
     mock.create_world_snapshot = AsyncMock(return_value=uuid4())
     mock.get_world_snapshot = AsyncMock()
     mock.rollback_to_snapshot = AsyncMock(return_value=True)
+    # Reverse event replay walks this list — it must be a real list, not an
+    # auto-created child mock (len()/reversed() would silently see nothing).
+    mock.get_changes_since_snapshot = AsyncMock(return_value=[])
     return mock
 
 
 @pytest.fixture
-async def world_service(mock_graph_db, mock_vector_db, mock_event_store):
-    """World Service with mocked dependencies"""
+async def world_service(mock_graph_db, mock_vector_db, mock_event_store, monkeypatch):
+    """World Service with mocked dependencies.
+
+    WorldService talks to module-level singletons, so the mocks must be
+    patched into the module namespace — assigning instance attributes
+    (the previous approach) left the real clients in place and the mocks
+    were never exercised.
+    """
+    import core.world_service as ws_module
+
     service = WorldService()
-    
-    # Replace dependencies with mocks
+    monkeypatch.setattr(ws_module, "graph_db", mock_graph_db)
+    monkeypatch.setattr(ws_module, "vector_db", mock_vector_db)
+    monkeypatch.setattr(ws_module, "event_store", mock_event_store)
+    mock_cache = AsyncMock()
+    # Defaults: every cache lookup is a miss unless a test says otherwise.
+    # Every getter the code awaits needs an explicit None — an auto-created
+    # child mock is truthy and would be returned as a fake cache hit.
+    mock_cache.get.return_value = None
+    mock_cache.get_entity.return_value = None
+    mock_cache.get_vector_search.return_value = None
+    mock_cache.get_ai_response.return_value = None
+    mock_cache.get_entity_context.return_value = None
+    monkeypatch.setattr(ws_module, "cache_service", mock_cache)
+
+    # Expose the same mocks as instance attributes so tests can reach them
+    # via the service object (module globals stay the interception point).
     service.graph_db = mock_graph_db
-    service.vector_db = mock_vector_db  
+    service.vector_db = mock_vector_db
     service.event_store = mock_event_store
+    service.cache_service = mock_cache
     service.is_initialized = True
-    
+
     return service
 
 

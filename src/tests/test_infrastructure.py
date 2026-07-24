@@ -1,74 +1,119 @@
 """
 Tests for Infrastructure components
 """
+import numpy as np
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 from infrastructure.graph_db import GraphDatabase
-from infrastructure.vector_db import VectorDatabase  
+from infrastructure.vector_db import VectorDatabase
 from core.event_sourcing import EventStore
 from domain.entities import EntityType, Location, NPC, ActionType, ActorType
 
 
+# --- Shared infrastructure mocks -------------------------------------------
+# Module-level so every test class (including TestDatabaseErrorHandling) can
+# use them; class-scoped fixtures are invisible to other classes.
+
+@pytest.fixture
+def mock_qdrant_client():
+    """Mock Qdrant client"""
+    return AsyncMock()
+
+
+@pytest.fixture
+def mock_sentence_transformer():
+    """Mock sentence transformer.
+
+    encode() must return an ndarray like the real model — the code calls
+    .tolist() on it.
+    """
+    encoder = MagicMock()
+    encoder.encode.return_value = np.array([0.1, 0.2, 0.3] * 128)  # 384 dims
+    return encoder
+
+
+@pytest.fixture
+def mock_engine():
+    """Mock SQLAlchemy async engine.
+
+    engine.begin() is a *sync* call returning an async context manager
+    whose __aenter__ yields the connection.
+    """
+    engine = AsyncMock()
+    conn = AsyncMock()
+    begin_cm = AsyncMock()
+    begin_cm.__aenter__.return_value = conn
+    engine.begin = MagicMock(return_value=begin_cm)
+    return engine
+
+
+@pytest.fixture
+def mock_session():
+    """Mock SQLAlchemy session usable as `async with session_factory():`"""
+    session = AsyncMock()
+    session.__aenter__ = AsyncMock(return_value=session)
+    session.__aexit__ = AsyncMock(return_value=None)
+    session.add = MagicMock()  # session.add is synchronous in SQLAlchemy
+    return session
+
+
 class TestGraphDatabase:
     """Test Neo4j Graph Database integration"""
-    
+
     @pytest.fixture
     def mock_driver(self):
-        """Mock Neo4j driver"""
+        """Mock Neo4j driver.
+
+        driver.session() is a *sync* call in the neo4j async API returning
+        an async session (graph_db.session() closes it via await close()).
+        """
         driver = AsyncMock()
         session = AsyncMock()
-        driver.session.return_value.__aenter__.return_value = session
-        driver.session.return_value.__aexit__.return_value = None
+        driver.session = MagicMock(return_value=session)
         return driver, session
-    
+
     @pytest.mark.integration
     async def test_connection(self, mock_driver):
         """Test database connection"""
         driver, session = mock_driver
-        
+
         with patch('infrastructure.graph_db.AsyncGraphDatabase') as mock_graph_db:
             mock_graph_db.driver.return_value = driver
-            
+
             graph_db = GraphDatabase()
             await graph_db.connect()
-            
+
             assert graph_db.driver == driver
             driver.verify_connectivity.assert_called_once()
-    
-    @pytest.mark.integration  
+            # connect() also initializes the schema through a session
+            assert session.run.call_count > 0
+
+    @pytest.mark.integration
     async def test_create_entity(self, mock_driver, sample_location):
         """Test entity creation in graph database"""
         driver, session = mock_driver
-        
-        # Mock session context manager
-        session.__aenter__ = AsyncMock(return_value=session)
-        session.__aexit__ = AsyncMock(return_value=None)
-        driver.session.return_value = session
-        
-        # Mock query result
+
+        # Mock query result: await session.run(...) -> result; await result.single() -> record
         mock_record = MagicMock()
-        session.run.return_value.single.return_value = mock_record
-        
+        query_result = MagicMock()
+        query_result.single = AsyncMock(return_value=mock_record)
+        session.run = AsyncMock(return_value=query_result)
+
         graph_db = GraphDatabase()
         graph_db.driver = driver
-        
+
         result = await graph_db.create_entity(sample_location)
-        
+
         assert result == sample_location
         session.run.assert_called_once()
-    
+
     @pytest.mark.integration
     async def test_get_entity(self, mock_driver, sample_location):
         """Test entity retrieval"""
         driver, session = mock_driver
-        
-        # Mock session and result
-        session.__aenter__ = AsyncMock(return_value=session)
-        session.__aexit__ = AsyncMock(return_value=None)
-        driver.session.return_value = session
-        
+
         mock_record = {
             "e": {
                 "id": str(sample_location.id),
@@ -78,62 +123,47 @@ class TestGraphDatabase:
             },
             "labels": ["Location", "Entity"]
         }
-        session.run.return_value.single.return_value = mock_record
-        
+        query_result = MagicMock()
+        query_result.single = AsyncMock(return_value=mock_record)
+        session.run = AsyncMock(return_value=query_result)
+
         graph_db = GraphDatabase()
         graph_db.driver = driver
         graph_db._record_to_entity = MagicMock(return_value=sample_location)
-        
+
         result = await graph_db.get_entity(sample_location.id, EntityType.LOCATION)
-        
+
         assert result == sample_location
         session.run.assert_called_once()
-    
+
     @pytest.mark.integration
     async def test_traverse_graph(self, mock_driver, sample_location):
         """Test graph traversal"""
         driver, session = mock_driver
-        
-        # Mock session
-        session.__aenter__ = AsyncMock(return_value=session)
-        session.__aexit__ = AsyncMock(return_value=None)
-        driver.session.return_value = session
-        
-        # Mock async iteration
-        async def mock_iterate():
-            yield {"e": {}, "labels": ["Location", "Entity"]}
-        
-        session.run.return_value.__aiter__ = mock_iterate
-        
+
+        # Mock async iteration over the query result
+        query_result = MagicMock()
+        query_result.__aiter__.return_value = [
+            {"e": {}, "labels": ["Location", "Entity"]}
+        ]
+        session.run = AsyncMock(return_value=query_result)
+
         graph_db = GraphDatabase()
         graph_db.driver = driver
         graph_db._record_to_entity = MagicMock(return_value=sample_location)
-        
+
         results = await graph_db.traverse_graph(
             start_entity_id=sample_location.id,
             max_depth=2
         )
-        
+
         assert len(results) == 1
         assert results[0] == sample_location
 
 
 class TestVectorDatabase:
     """Test Qdrant Vector Database integration"""
-    
-    @pytest.fixture
-    def mock_qdrant_client(self):
-        """Mock Qdrant client"""
-        client = AsyncMock()
-        return client
-    
-    @pytest.fixture
-    def mock_sentence_transformer(self):
-        """Mock sentence transformer"""
-        encoder = MagicMock()
-        encoder.encode.return_value = [0.1, 0.2, 0.3] * 128  # 384 dimensions
-        return encoder
-    
+
     @pytest.mark.integration
     async def test_connection(self, mock_qdrant_client, mock_sentence_transformer):
         """Test vector database connection"""
@@ -212,32 +242,22 @@ class TestVectorDatabase:
 
 class TestEventStore:
     """Test PostgreSQL Event Store"""
-    
-    @pytest.fixture
-    def mock_engine(self):
-        """Mock SQLAlchemy engine"""
-        engine = AsyncMock()
-        return engine
-    
-    @pytest.fixture
-    def mock_session(self):
-        """Mock SQLAlchemy session"""
-        session = AsyncMock()
-        session.__aenter__ = AsyncMock(return_value=session)
-        session.__aexit__ = AsyncMock(return_value=None)
-        return session
-    
+
     @pytest.mark.integration
     async def test_connection(self, mock_engine, mock_session):
         """Test event store connection"""
+        session_factory = MagicMock(return_value=mock_session)
+
         with patch('core.event_sourcing.create_async_engine', return_value=mock_engine), \
-             patch('core.event_sourcing.async_sessionmaker', return_value=mock_session):
-            
+             patch('core.event_sourcing.async_sessionmaker', return_value=session_factory):
+
             event_store = EventStore()
             await event_store.connect()
-            
+
             assert event_store.engine == mock_engine
-            assert event_store.async_session == mock_session
+            assert event_store.async_session == session_factory
+            # connect() creates the tables inside `async with engine.begin()`
+            mock_engine.begin.assert_called_once()
     
     @pytest.mark.integration 
     async def test_log_change(self, mock_session):
@@ -267,18 +287,19 @@ class TestEventStore:
     async def test_get_entity_history(self, mock_session):
         """Test getting entity history"""
         entity_id = uuid4()
-        
-        # Mock query result
-        mock_result = AsyncMock()
+
+        # Mock query result: result.scalars().all() is synchronous in SQLAlchemy
+        mock_result = MagicMock()
         mock_result.scalars.return_value.all.return_value = []
-        mock_session.execute.return_value = mock_result
-        
+        mock_session.execute = AsyncMock(return_value=mock_result)
+
         event_store = EventStore()
         event_store.async_session = lambda: mock_session
-        
+
         history = await event_store.get_entity_history(entity_id, limit=10)
-        
+
         assert isinstance(history, list)
+        assert history == []
         mock_session.execute.assert_called_once()
     
     @pytest.mark.integration

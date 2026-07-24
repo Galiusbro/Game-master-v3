@@ -3,7 +3,7 @@ Tests for API endpoints
 """
 import pytest
 import asyncio
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
@@ -14,7 +14,8 @@ from domain.entities import EntityType, Location, NPC, Player, Item, ItemType
 @pytest.fixture
 async def client():
     """HTTP client for testing API"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    # httpx >= 0.28 removed the `app=` shortcut — use ASGITransport explicitly.
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         yield ac
 
 
@@ -353,28 +354,54 @@ class TestSnapshotEndpoints:
     
     @pytest.mark.api
     async def test_rollback_to_snapshot(self, client, mock_world_service):
-        """Test rolling back to a snapshot"""
+        """Test rolling back to a snapshot returns the replay report"""
         snapshot_id = uuid4()
-        
+        report = {
+            "snapshot_id": str(snapshot_id),
+            "events_seen": 3,
+            "reverted_creates": 1,
+            "reverted_updates": 1,
+            "restored_deletes": 1,
+            "skipped": 0,
+            "errors": [],
+        }
+
         with patch('api.routes.world_service', mock_world_service):
-            mock_world_service.rollback_to_snapshot.return_value = True
-            
+            mock_world_service.rollback_to_snapshot.return_value = report
+
             response = await client.post(f"/api/v1/snapshots/{snapshot_id}/rollback")
             assert response.status_code == 200
-            
+
             data = response.json()
-            assert "initiated successfully" in data["message"]
-    
+            assert data["message"] == "Rollback completed"
+            assert data["report"] == report
+
+            mock_world_service.rollback_to_snapshot.assert_called_once_with(snapshot_id)
+
     @pytest.mark.api
     async def test_rollback_failure(self, client, mock_world_service):
-        """Test rollback failure"""
+        """Test rollback of a missing snapshot maps ValueError to 404"""
         snapshot_id = uuid4()
-        
+
         with patch('api.routes.world_service', mock_world_service):
-            mock_world_service.rollback_to_snapshot.return_value = False
-            
+            mock_world_service.rollback_to_snapshot.side_effect = ValueError(
+                f"Snapshot {snapshot_id} not found"
+            )
+
             response = await client.post(f"/api/v1/snapshots/{snapshot_id}/rollback")
-            assert response.status_code == 400
+            assert response.status_code == 404
+            assert "not found" in response.json()["detail"].lower()
+
+    @pytest.mark.api
+    async def test_rollback_internal_error(self, client, mock_world_service):
+        """Test unexpected rollback errors map to 500"""
+        snapshot_id = uuid4()
+
+        with patch('api.routes.world_service', mock_world_service):
+            mock_world_service.rollback_to_snapshot.side_effect = RuntimeError("replay blew up")
+
+            response = await client.post(f"/api/v1/snapshots/{snapshot_id}/rollback")
+            assert response.status_code == 500
 
 
 class TestHistoryEndpoints:
