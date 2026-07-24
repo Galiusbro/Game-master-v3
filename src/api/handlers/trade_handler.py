@@ -5,15 +5,23 @@ Handles trade/commerce actions
 """
 
 import logging
+from typing import Any, TYPE_CHECKING
 
 from fastapi import BackgroundTasks
 
 from api.ai_routes import NPCDialogueRequest, npc_dialogue
 
+if TYPE_CHECKING:
+    # Imported for type annotations only (runtime import would be circular).
+    from api.game_routes import GameCommandRequest
+    from core.semantic_parser import ParsedCommand
+
 logger = logging.getLogger(__name__)
 
 
-async def handle_trade(request, parsed) -> dict:
+async def handle_trade(
+    request: "GameCommandRequest", parsed: "ParsedCommand"
+) -> dict[str, Any]:
     """Handle trade/commerce actions"""
     
     if parsed.target_npc_id:

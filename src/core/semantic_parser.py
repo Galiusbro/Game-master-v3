@@ -37,24 +37,24 @@ class ParsedCommand:
     
     # Extracted information
     message: Optional[str] = None
-    intent_details: Dict[str, Any] = None
+    intent_details: Optional[Dict[str, Any]] = None
     confidence: float = 0.0
-    
+
     # Skill check specific data
     requires_roll: bool = False
     skill_type: Optional[SkillType] = None
     ability_type: Optional[AbilityScore] = None
     estimated_dc: Optional[int] = None
-    context_modifiers: Dict[str, Any] = None
-    
+    context_modifiers: Optional[Dict[str, Any]] = None
+
     # Context used for resolution
-    context_entities: List[BaseEntity] = None
+    context_entities: Optional[List[BaseEntity]] = None
 
 
 class SemanticParser:
     """Main semantic parser class"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         # Note: Action patterns moved to CommandClassificationService
         # This provides better semantic understanding and multilingual support
         
@@ -438,7 +438,7 @@ class SemanticParser:
     ) -> Dict[str, Any]:
         """Analyze if command requires skill checks and determine details"""
         
-        result = {
+        result: Dict[str, Any] = {
             'requires_roll': False,
             'skill_type': None,
             'ability_type': None,

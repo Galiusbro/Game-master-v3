@@ -14,7 +14,7 @@ Features:
 """
 
 import asyncio
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 from uuid import UUID
 from dataclasses import dataclass
 
@@ -32,13 +32,13 @@ class EnrichmentContext:
     world_lore: str = ""
     master_lore: str = ""  # Master Lore that guides all enrichment
     parent_context: Optional[Dict[str, Any]] = None
-    sibling_entities: List[Dict[str, Any]] = None
+    sibling_entities: Optional[List[Dict[str, Any]]] = None
 
 
 class AIWorldEnrichmentService:
     """Service for batch AI enrichment of world entities"""
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         self.templates = self._init_templates()
     
     def _init_templates(self) -> Dict[str, Dict[str, str]]:
@@ -455,8 +455,8 @@ Generate:
             print("=" * 80)
             print(response.content)
             print("=" * 80)
-            
-            return response.content
+
+            return cast(str, response.content)
             
         except Exception as e:
             print(f"❌ Failed to generate Master Lore: {e}")
@@ -519,12 +519,15 @@ CURRENT ERA: An age of uncertainty where heroes must rise to face growing darkne
             return
         
         template = self.templates["world"]
-        
+
+        # parent_context is always populated by _build_world_context for this call
+        parent_context = cast(Dict[str, Any], context.parent_context)
+
         # Format prompt with Master Lore and world structure
         prompt = template["user"].format(
             master_lore=context.master_lore,
-            world_structure=str(context.parent_context["world_structure"]),
-            geography_summary=context.parent_context["geography_summary"]
+            world_structure=str(parent_context["world_structure"]),
+            geography_summary=parent_context["geography_summary"]
         )
         
         # Generate enriched world lore

@@ -13,6 +13,7 @@ import random
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
+import numpy.typing as npt
 
 from core.worldgen.utils import create_location_entity, link_to_parent
 from core.worldgen.classifiers import (
@@ -104,8 +105,8 @@ async def create_region_entities(
 
 
 def sample_region_locations(
-    continent_mask: np.ndarray,
-    heightmap: np.ndarray,
+    continent_mask: npt.NDArray[np.uint8],
+    heightmap: npt.NDArray[np.float32],
     sea_level: float,
     region_count: int,
     rng: random.Random,
@@ -149,7 +150,7 @@ def sample_region_locations(
 
 async def generate_regions_for_continent(
     continent_info: Dict[str, Any],
-    heightmap: np.ndarray,
+    heightmap: npt.NDArray[np.float32],
     sea_level: float,
     grid_size: int,
     continent_index: int,
@@ -191,7 +192,7 @@ async def generate_regions_for_continent(
 
 async def generate_all_regions(
     continents_info: List[Dict[str, Any]],
-    heightmap: np.ndarray,
+    heightmap: npt.NDArray[np.float32],
     sea_level: float,
     grid_size: int,
     rng: random.Random,

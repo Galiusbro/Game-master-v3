@@ -302,7 +302,7 @@ class Player(BaseEntity):
     personal_notes: Dict[str, str] = Field(default_factory=dict)
     
     # Roll history for this character
-    recent_rolls: List[DiceRoll] = Field(default_factory=list, max_items=50)
+    recent_rolls: List[DiceRoll] = Field(default_factory=list, max_length=50)
     
     @property
     def effective_level(self) -> int:

@@ -6,6 +6,8 @@ import signal
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
+from types import FrameType
+from typing import Any, AsyncGenerator, Optional
 
 import uvicorn
 from dotenv import load_dotenv
@@ -39,7 +41,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def signal_handler(signum, frame):
+def signal_handler(signum: int, frame: Optional[FrameType]) -> None:
     """Handle shutdown signals gracefully"""
     logger.info(f"Received signal {signum}, shutting down gracefully...")
     # For reload mode, we need to ensure all child processes are terminated
@@ -55,7 +57,7 @@ def signal_handler(signum, frame):
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Application lifespan manager"""
     # Startup
     logger.info(f"Starting {settings.app_name} v{settings.app_version}")
@@ -108,7 +110,7 @@ instrumentator.instrument(app).expose(app)
 
 
 @app.get("/")
-async def root():
+async def root() -> dict[str, Any]:
     """Root endpoint"""
     return {
         "message": f"Welcome to {settings.app_name}",
@@ -118,7 +120,7 @@ async def root():
 
 
 @app.get("/health")
-async def health_check():
+async def health_check() -> dict[str, Any]:
     """Health check endpoint"""
     return {
         "status": "healthy",

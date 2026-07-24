@@ -13,12 +13,13 @@ import random
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
+import numpy.typing as npt
 
 from core.worldgen.utils import create_location_entity, link_to_parent
 
 
 def find_nearest_coast_point(
-    target_u: float, target_v: float, coast_coordinates: np.ndarray | None
+    target_u: float, target_v: float, coast_coordinates: npt.NDArray[np.float64] | None
 ) -> Tuple[float, float]:
     """Find the nearest coastline point to given coordinates.
     
@@ -43,9 +44,9 @@ def find_nearest_coast_point(
 def trace_river_path(
     start_y: int,
     start_x: int,
-    heightmap: np.ndarray,
-    water_mask: np.ndarray,
-    coast_coordinates: np.ndarray | None,
+    heightmap: npt.NDArray[np.float32],
+    water_mask: npt.NDArray[np.uint8],
+    coast_coordinates: npt.NDArray[np.float64] | None,
     max_steps: int = 1000,
 ) -> Tuple[List[Tuple[float, float]], bool]:
     """Trace a river path from source to water using downhill flow.
@@ -133,8 +134,8 @@ def trace_river_path(
 
 
 def select_river_sources(
-    continent_mask: np.ndarray,
-    heightmap: np.ndarray,
+    continent_mask: npt.NDArray[np.uint8],
+    heightmap: npt.NDArray[np.float32],
     rng: random.Random,
     target_count: Tuple[int, int] = (1, 3),
 ) -> List[Tuple[int, int]]:
@@ -189,9 +190,9 @@ def select_river_sources(
 
 async def generate_rivers_for_continent(
     continent_info: Dict[str, Any],
-    heightmap: np.ndarray,
-    water_mask: np.ndarray,
-    coast_coordinates: np.ndarray | None,
+    heightmap: npt.NDArray[np.float32],
+    water_mask: npt.NDArray[np.uint8],
+    coast_coordinates: npt.NDArray[np.float64] | None,
     rng: random.Random,
     world_actor_id: Any,
 ) -> List[str]:
@@ -258,9 +259,9 @@ async def generate_rivers_for_continent(
 
 async def generate_all_rivers(
     continents_info: List[Dict[str, Any]],
-    heightmap: np.ndarray,
-    water_mask: np.ndarray,
-    coast_coordinates: np.ndarray | None,
+    heightmap: npt.NDArray[np.float32],
+    water_mask: npt.NDArray[np.uint8],
+    coast_coordinates: npt.NDArray[np.float64] | None,
     rng: random.Random,
     world_actor_id: Any,
 ) -> List[str]:

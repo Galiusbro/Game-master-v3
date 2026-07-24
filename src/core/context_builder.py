@@ -5,7 +5,7 @@ Intelligent context assembly for LLM prompts with graph traversal and vector sea
 import logging
 import time
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, TypeVar
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -13,7 +13,15 @@ from pydantic import BaseModel
 from config.settings import settings
 from core.world_service import world_service
 from domain.entities import BaseEntity, EntityType, NPC, Player, Location, Item, Event
-from monitoring.metrics import track_context_building
+
+if TYPE_CHECKING:
+    _TFunc = TypeVar("_TFunc", bound=Callable[..., Any])
+
+    # Typed facade: monitoring.metrics is untyped for mypy in this run,
+    # but the decorator preserves the wrapped function's signature.
+    def track_context_building(operation: str) -> Callable[[_TFunc], _TFunc]: ...
+else:
+    from monitoring.metrics import track_context_building
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +49,7 @@ class ContextMetrics(BaseModel):
 class SmartContextBuilder:
     """Intelligent context builder with optimization and prioritization"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.max_context_tokens = settings.context_max_tokens
         self.max_traversal_depth = settings.graph_traversal_max_depth
         self.max_entities = 20  # Reasonable limit for most contexts
@@ -51,7 +59,7 @@ class SmartContextBuilder:
         entity: BaseEntity,
         player: Player,
         interaction_target: Optional[BaseEntity] = None,
-        current_time: datetime = None
+        current_time: Optional[datetime] = None
     ) -> int:
         """Calculate priority score for an entity in context"""
         priority = ContextPriority.MINIMAL
@@ -273,7 +281,7 @@ class SmartContextBuilder:
         # Select entities within token budget
         selected_entities = []
         total_tokens = 0
-        priority_counts = {}
+        priority_counts: Dict[str, int] = {}
         
         for entity, priority in entities_with_priority:
             # Include dead NPCs in context but with lower priority (unless they're the direct interaction target)

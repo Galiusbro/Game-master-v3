@@ -13,7 +13,7 @@ MVP: factions are postponed to avoid pipeline bloat.
 """
 
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, cast
 
 from core.worldgen.utils import create_location_entity, link_to_parent
 from core.world_service import world_service
@@ -168,7 +168,8 @@ async def generate_countries_and_laws(
 
             # Light upgrade: control & guard presence for towns inside country's regions
             controlled_region_ids = set(country_info["region_ids"])
-            lawfulness = metadata.get("lawfulness", "moderate")
+            # metadata mixes str and list values, but "lawfulness" is always a str
+            lawfulness = cast(str, metadata.get("lawfulness", "moderate"))
             guard_base = {"strict": 0.8, "moderate": 0.6, "lenient": 0.4}.get(lawfulness, 0.6)
 
             for region in assigned_regions:

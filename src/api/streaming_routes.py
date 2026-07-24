@@ -4,7 +4,7 @@ Provides Server-Sent Events (SSE) for live AI response streaming
 """
 import json
 import logging
-from typing import List, Optional
+from typing import AsyncGenerator, Dict, List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -43,7 +43,7 @@ def format_sse_data(data: str, event: str = "message") -> str:
 
 
 @router.post("/command")
-async def stream_game_command(request: StreamCommandRequest):
+async def stream_game_command(request: StreamCommandRequest) -> StreamingResponse:
     """
     Stream game command response in real-time using Server-Sent Events
     
@@ -53,7 +53,7 @@ async def stream_game_command(request: StreamCommandRequest):
     try:
         logger.info(f"Streaming command: {request.command[:50]}...")
         
-        async def generate_stream():
+        async def generate_stream() -> AsyncGenerator[str, None]:
             try:
                 # Send initial status
                 yield format_sse_data("Starting command processing...", "status")
@@ -130,7 +130,7 @@ async def stream_game_command(request: StreamCommandRequest):
 
 
 @router.post("/npc-dialogue")
-async def stream_npc_dialogue(request: StreamNPCDialogueRequest):
+async def stream_npc_dialogue(request: StreamNPCDialogueRequest) -> StreamingResponse:
     """
     Stream NPC dialogue response in real-time
     
@@ -140,7 +140,7 @@ async def stream_npc_dialogue(request: StreamNPCDialogueRequest):
     try:
         logger.info(f"Streaming NPC dialogue for NPC: {request.npc_id}")
         
-        async def generate_dialogue_stream():
+        async def generate_dialogue_stream() -> AsyncGenerator[str, None]:
             try:
                 # Send initial status
                 yield format_sse_data("Initiating dialogue...", "status")
@@ -209,7 +209,7 @@ async def stream_npc_dialogue(request: StreamNPCDialogueRequest):
 
 
 @router.get("/health")
-async def streaming_health():
+async def streaming_health() -> Dict[str, str]:
     """Health check for streaming endpoints"""
     return {"status": "healthy", "streaming": "available"}
 
@@ -220,12 +220,12 @@ async def stream_world_exploration(
     world_id: str = Query(..., description="World identifier"),
     location: str = Query(..., description="Location to explore"),
     detail_level: str = Query(default="normal", description="Detail level: brief, normal, detailed")
-):
+) -> StreamingResponse:
     """
     Stream world exploration descriptions
     Future endpoint for detailed area exploration
     """
-    async def generate_exploration_stream():
+    async def generate_exploration_stream() -> AsyncGenerator[str, None]:
         yield format_sse_data("Exploration streaming not yet implemented", "info")
         yield format_sse_data("This endpoint will provide detailed area descriptions", "info")
     

@@ -5,7 +5,7 @@ Handles all dice mechanics, skill checks, and complex action resolution
 import logging
 import random
 import re
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 from uuid import UUID, uuid4
 from datetime import datetime
 
@@ -35,7 +35,7 @@ class DifficultyClass:
 class DiceEngine:
     """Core dice rolling and action resolution engine"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.random = random.Random()
         # Seed with current time for true randomness
         self.random.seed()
@@ -322,7 +322,7 @@ class DiceEngine:
     def determine_difficulty_class(
         self,
         action_description: str,
-        context: Dict[str, any] = None
+        context: Optional[Dict[str, Any]] = None
     ) -> int:
         """
         Automatically determine appropriate DC based on action description and context
@@ -388,7 +388,7 @@ class DiceEngine:
         actor: Player,
         action_description: str,
         target_id: Optional[UUID] = None,
-        context: Dict[str, any] = None
+        context: Optional[Dict[str, Any]] = None
     ) -> ActionSequence:
         """
         Resolve a complex action that might require multiple rolls

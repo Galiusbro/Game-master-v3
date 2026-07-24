@@ -10,12 +10,13 @@ Provides core algorithms for:
 """
 
 import random
-from typing import List, Tuple
+from typing import Any, List, Tuple
 
 import numpy as np
+import numpy.typing as npt
 
 
-def generate_fractal_noise(rng: random.Random, size: int, octaves: int = 4) -> np.ndarray:
+def generate_fractal_noise(rng: random.Random, size: int, octaves: int = 4) -> npt.NDArray[np.float32]:
     """Generate fractal noise using simple additive approach.
     
     Args:
@@ -41,7 +42,7 @@ def generate_fractal_noise(rng: random.Random, size: int, octaves: int = 4) -> n
     return base
 
 
-def derive_water_mask(height: np.ndarray, water_ratio: float) -> Tuple[float, np.ndarray]:
+def derive_water_mask(height: npt.NDArray[np.float32], water_ratio: float) -> Tuple[float, npt.NDArray[np.uint8]]:
     """Determine sea level and create water mask from heightmap.
     
     Args:
@@ -56,7 +57,7 @@ def derive_water_mask(height: np.ndarray, water_ratio: float) -> Tuple[float, np
     return sea_level, is_water
 
 
-def label_connected_components(mask: np.ndarray) -> List[np.ndarray]:
+def label_connected_components(mask: npt.NDArray[Any]) -> List[npt.NDArray[np.uint8]]:
     """Find connected components in binary mask using 4-connectivity.
     
     Args:
@@ -93,7 +94,7 @@ def label_connected_components(mask: np.ndarray) -> List[np.ndarray]:
     ]
 
 
-def _create_component_mask(comp: List[Tuple[int, int]], h: int, w: int) -> np.ndarray:
+def _create_component_mask(comp: List[Tuple[int, int]], h: int, w: int) -> npt.NDArray[np.uint8]:
     """Create binary mask from list of coordinates."""
     m = np.zeros((h, w), dtype=np.uint8)
     for y, x in comp:
@@ -101,7 +102,7 @@ def _create_component_mask(comp: List[Tuple[int, int]], h: int, w: int) -> np.nd
     return m
 
 
-def center_of_mask(mask: np.ndarray) -> Tuple[float, float]:
+def center_of_mask(mask: npt.NDArray[Any]) -> Tuple[float, float]:
     """Calculate the centroid of a binary mask.
     
     Args:
@@ -116,7 +117,7 @@ def center_of_mask(mask: np.ndarray) -> Tuple[float, float]:
     return float(xs.mean()) / mask.shape[1], float(ys.mean()) / mask.shape[0]
 
 
-def find_coastline_pixels(land_mask: np.ndarray, water_mask: np.ndarray) -> np.ndarray:
+def find_coastline_pixels(land_mask: npt.NDArray[Any], water_mask: npt.NDArray[Any]) -> npt.NDArray[np.uint8]:
     """Find coastline pixels (land cells adjacent to water).
     
     Args:

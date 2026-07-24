@@ -94,7 +94,7 @@ def compute_social_dc(
 
 def apply_disposition_change(npc: NPC, player_id: UUID, delta: int) -> int:
     """Apply disposition change and clamp to [-100, 100]. Returns new score."""
-    current = npc.current_state.disposition_to_player.get(player_id, 0)
+    current: int = npc.current_state.disposition_to_player.get(player_id, 0)
     new_score = max(-100, min(100, current + int(delta)))
     npc.current_state.disposition_to_player[player_id] = new_score
     return new_score

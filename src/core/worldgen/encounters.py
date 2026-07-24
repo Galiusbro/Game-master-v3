@@ -66,7 +66,7 @@ async def attach_region_encounters(
                 entity.metadata["encounter_table"]["entries"] = entries
                 # Mark unsafe for dangerous biomes
                 if biome in ("swamp", "mountains", "desert"):
-                    entity.is_safe = False  # type: ignore[attr-defined]
+                    entity.is_safe = False
                 await world_service.update_entity(entity, actor_id=entity.id)
             except Exception:
                 continue

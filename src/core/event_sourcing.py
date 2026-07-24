@@ -5,12 +5,12 @@ Tracks all changes to the world state for consistency and rollback capability
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union, cast
 from uuid import UUID, uuid4
 
 class UUIDEncoder(json.JSONEncoder):
     """JSON encoder that handles UUID and datetime objects"""
-    def default(self, obj):
+    def default(self, obj: Any) -> Any:
         if isinstance(obj, UUID):
             return str(obj)
         elif isinstance(obj, datetime):
@@ -20,7 +20,7 @@ class UUIDEncoder(json.JSONEncoder):
 import asyncpg
 from sqlalchemy import Column, DateTime, Float, String, Text, create_engine
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
 from sqlalchemy.orm import sessionmaker
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 Base = declarative_base()
 
 
-class EventLogModel(Base):
+class EventLogModel(Base):  # type: ignore[valid-type, misc]  # declarative_base() is untyped (SQLAlchemy stub gap)
     """SQLAlchemy model for event log table"""
     __tablename__ = "event_log"
     
@@ -55,7 +55,7 @@ class EventLogModel(Base):
     rollback_data = Column(JSONB, nullable=True)
 
 
-class WorldSnapshotModel(Base):
+class WorldSnapshotModel(Base):  # type: ignore[valid-type, misc]  # declarative_base() is untyped (SQLAlchemy stub gap)
     """SQLAlchemy model for world snapshots"""
     __tablename__ = "world_snapshots"
     
@@ -69,9 +69,12 @@ class WorldSnapshotModel(Base):
 class EventStore:
     """Event store for tracking all world changes"""
     
-    def __init__(self):
-        self.engine = None
-        self.async_session = None
+    def __init__(self) -> None:
+        # Both are populated in connect(); calling other methods before
+        # connect() has always failed at runtime, so the annotations reflect
+        # the connected state.
+        self.engine: AsyncEngine = None  # type: ignore[assignment]
+        self.async_session: async_sessionmaker[AsyncSession] = None  # type: ignore[assignment]
     
     def _serialize_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Serialize state for JSONB storage, handling UUIDs and other complex types, including UUID dict keys"""
@@ -101,7 +104,7 @@ class EventStore:
             return obj
 
         safe_state = stringify(state)
-        return json.loads(json.dumps(safe_state, cls=UUIDEncoder))
+        return cast(Dict[str, Any], json.loads(json.dumps(safe_state, cls=UUIDEncoder)))
         
     async def connect(self) -> None:
         """Initialize connection to PostgreSQL"""
@@ -336,8 +339,10 @@ class EventStore:
         async with self.async_session() as session:
             session.add(snapshot)
             await session.commit()
-            snapshot_id = snapshot.id
-        
+            # Legacy Column attributes are typed as Column[...] on instances,
+            # but at runtime this is the generated UUID value.
+            snapshot_id = cast(UUID, snapshot.id)
+
         logger.info(f"Created world snapshot: {snapshot_id}")
         return snapshot_id
     

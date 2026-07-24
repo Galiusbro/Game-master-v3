@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class GraphDatabase:
     """Neo4j graph database client"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.driver: Optional[AsyncDriver] = None
         self.uri = settings.neo4j_uri
         self.user = settings.neo4j_user
@@ -37,12 +37,12 @@ class GraphDatabase:
         from enum import Enum
         
         class UUIDEncoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, UUID):
-                    return str(obj)
-                elif isinstance(obj, datetime):
-                    return obj.isoformat()
-                return super().default(obj)
+            def default(self, o: Any) -> Any:
+                if isinstance(o, UUID):
+                    return str(o)
+                elif isinstance(o, datetime):
+                    return o.isoformat()
+                return super().default(o)
 
         def stringify(obj: Any) -> Any:
             """Recursively ensure dict keys are strings and convert special types."""
@@ -65,7 +65,7 @@ class GraphDatabase:
                 return obj.isoformat()
             return obj
         
-        serialized = {}
+        serialized: Dict[str, Any] = {}
         for key, value in props.items():
             if isinstance(value, UUID):
                 # Convert standalone UUIDs to strings
@@ -251,8 +251,11 @@ class GraphDatabase:
         async with self.session() as session:
             result = await session.run(query, entity_id=str(entity_id))
             record = await result.single()
-            deleted = record["deleted_count"] > 0
-            
+            if not record:
+                # RETURN count(e) always yields exactly one row
+                raise RuntimeError(f"Failed to delete entity {entity_id}")
+            deleted: bool = record["deleted_count"] > 0
+
             if deleted:
                 logger.info(f"Deleted entity: {entity_id}")
             return deleted
@@ -344,7 +347,7 @@ class GraphDatabase:
         
         return entities
     
-    def _record_to_entity(self, record) -> Optional[BaseEntity]:
+    def _record_to_entity(self, record: Any) -> Optional[BaseEntity]:
         """Convert Neo4j record to domain entity"""
         node = record["e"]
         labels = record["labels"]

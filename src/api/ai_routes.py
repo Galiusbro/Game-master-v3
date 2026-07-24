@@ -3,7 +3,7 @@ AI Routes for Game Master V3
 API endpoints for AI-powered game interactions
 """
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -58,12 +58,14 @@ class ContextSummaryResponse(BaseModel):
     total_entities_found: int
     entities_included: int
     tokens_estimated: int
-    priority_breakdown: dict
+    priority_breakdown: Dict[str, Any]
     assembly_time: float
 
 
 @router.post("/npc/dialogue", response_model=AIInteractionResponse)
-async def npc_dialogue(request: NPCDialogueRequest, background_tasks: BackgroundTasks):
+async def npc_dialogue(
+    request: NPCDialogueRequest, background_tasks: BackgroundTasks
+) -> AIInteractionResponse:
     """Generate NPC dialogue response to player message"""
     try:
         # Get player and NPC entities
@@ -141,7 +143,9 @@ async def npc_dialogue(request: NPCDialogueRequest, background_tasks: Background
 
 
 @router.post("/world/describe", response_model=AIInteractionResponse)
-async def describe_world(request: WorldDescriptionRequest, background_tasks: BackgroundTasks):
+async def describe_world(
+    request: WorldDescriptionRequest, background_tasks: BackgroundTasks
+) -> AIInteractionResponse:
     """Generate world/location description based on player request"""
     try:
         # Get player entity
@@ -215,7 +219,7 @@ async def preview_context(
     player_id: UUID,
     interaction_target_id: Optional[UUID] = None,
     search_query: Optional[str] = None
-):
+) -> Dict[str, Any]:
     """Preview what context would be built for a player (debugging/testing)"""
     try:
         player = await world_service.get_entity(player_id, EntityType.PLAYER)
@@ -259,7 +263,7 @@ async def preview_context(
 
 
 @router.get("/health")
-async def ai_health_check():
+async def ai_health_check() -> Dict[str, Any]:
     """Check AI service health"""
     try:
         is_healthy = ai_service.is_initialized
@@ -280,7 +284,7 @@ async def ai_health_check():
 
 
 # Background task functions
-async def log_ai_interaction(event: Event, actor_id: UUID):
+async def log_ai_interaction(event: Event, actor_id: UUID) -> None:
     """Log AI interaction as background task"""
     try:
         await world_service.create_entity(
@@ -296,14 +300,14 @@ async def log_ai_interaction(event: Event, actor_id: UUID):
 
 # Utility endpoints for AI management
 @router.post("/admin/reset-context-cache")
-async def reset_context_cache():
+async def reset_context_cache() -> Dict[str, str]:
     """Reset any context caching (admin endpoint)"""
     # For future context caching implementation
     return {"message": "Context cache cleared"}
 
 
 @router.get("/admin/ai-stats")
-async def get_ai_stats():
+async def get_ai_stats() -> Dict[str, Any]:
     """Get AI usage statistics (admin endpoint)"""
     try:
         # Get recent AI-generated events

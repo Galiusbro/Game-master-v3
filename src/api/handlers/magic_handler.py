@@ -5,17 +5,24 @@ Handles magic spells and rituals with automatic event creation
 """
 
 import logging
-from typing import Optional
+from typing import Any, Optional, TYPE_CHECKING
 from uuid import UUID
 
 from core.world_service import world_service
 from domain.entities import EntityType
 from infrastructure.command_classification_service import command_classifier
 
+if TYPE_CHECKING:
+    # Imported for type annotations only (runtime import would be circular).
+    from api.game_routes import GameCommandRequest
+    from core.semantic_parser import ParsedCommand
+
 logger = logging.getLogger(__name__)
 
 
-async def handle_magic(request, parsed) -> dict:
+async def handle_magic(
+    request: "GameCommandRequest", parsed: "ParsedCommand"
+) -> dict[str, Any]:
     """Handle magic spells and rituals with automatic event creation"""
     logger.info(f"🔮 Processing magic action: {parsed.raw_command}")
     

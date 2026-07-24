@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class VectorDatabase:
     """Qdrant vector database client for semantic search"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.client: Optional[AsyncQdrantClient] = None
         self.encoder: Optional[SentenceTransformer] = None
         self.collection_name = settings.qdrant_collection_name
@@ -61,6 +61,8 @@ class VectorDatabase:
     
     async def _ensure_collection_exists(self) -> None:
         """Create collection if it doesn't exist"""
+        if self.client is None:
+            raise RuntimeError("Vector database not connected")
         try:
             collections = await self.client.get_collections()
             collection_names = [c.name for c in collections.collections]
@@ -97,7 +99,8 @@ class VectorDatabase:
         
         # Encode text to vector
         embedding = self.encoder.encode(text, convert_to_numpy=True)
-        return embedding.tolist()
+        vector: List[float] = embedding.tolist()
+        return vector
     
     def _entity_to_searchable_text(self, entity: BaseEntity) -> str:
         """Convert entity to searchable text"""
@@ -193,7 +196,8 @@ class VectorDatabase:
         
         elif entity.type == EntityType.ITEM:
             item = entity
-            payload["item_type"] = getattr(item, 'item_type', {}).value if hasattr(getattr(item, 'item_type', {}), 'value') else None
+            item_type_attr: Any = getattr(item, 'item_type', {})
+            payload["item_type"] = item_type_attr.value if hasattr(item_type_attr, 'value') else None
             payload["is_unique"] = getattr(item, 'is_unique', False)
             
             # Safely convert UUID fields to strings
@@ -205,7 +209,8 @@ class VectorDatabase:
         
         elif entity.type == EntityType.EVENT:
             event = entity
-            payload["action_type"] = getattr(event, 'action_type', {}).value if hasattr(getattr(event, 'action_type', {}), 'value') else None
+            action_type_attr: Any = getattr(event, 'action_type', {})
+            payload["action_type"] = action_type_attr.value if hasattr(action_type_attr, 'value') else None
             
             # Safely convert UUID fields to strings
             actor_id = getattr(event, 'actor_id', None)
@@ -227,6 +232,8 @@ class VectorDatabase:
             "collection": "docs",
         }
         point = models.PointStruct(id=safe_id, vector=embedding, payload=payload)
+        if self.client is None:
+            raise RuntimeError("Vector database not connected")
         await self.client.upsert(collection_name=self.docs_collection_name, points=[point])
         logger.debug(f"Stored doc in vector DB: {doc_id}")
 
@@ -234,13 +241,15 @@ class VectorDatabase:
         """Search in docs collection and return payloads with scores."""
         query_embedding = self._encode_text(query)
 
-        must_conditions = []
+        must_conditions: List[models.Condition] = []
         if tags:
             must_conditions.append(
                 models.FieldCondition(key="tags", match=models.MatchAny(any=tags))
             )
         search_filter = models.Filter(must=must_conditions) if must_conditions else None
 
+        if self.client is None:
+            raise RuntimeError("Vector database not connected")
         search_result = await self.client.search(
             collection_name=self.docs_collection_name,
             query_vector=query_embedding,
@@ -264,7 +273,9 @@ class VectorDatabase:
             vector=embedding,
             payload=payload,
         )
-        
+
+        if self.client is None:
+            raise RuntimeError("Vector database not connected")
         await self.client.upsert(
             collection_name=self.collection_name,
             points=[point],
@@ -282,9 +293,9 @@ class VectorDatabase:
     ) -> List[Tuple[BaseEntity, float]]:
         """Search for entities by semantic similarity"""
         query_embedding = self._encode_text(query)
-        
+
         # Build filter conditions
-        must_conditions = []
+        must_conditions: List[models.Condition] = []
         
         # Filter by entity types
         if entity_types:
@@ -316,8 +327,10 @@ class VectorDatabase:
         search_filter = None
         if must_conditions:
             search_filter = models.Filter(must=must_conditions)
-        
+
         # Perform search
+        if self.client is None:
+            raise RuntimeError("Vector database not connected")
         search_result = await self.client.search(
             collection_name=self.collection_name,
             query_vector=query_embedding,
@@ -330,7 +343,8 @@ class VectorDatabase:
         for point in search_result:
             # Convert payload back to entity
             payload = point.payload
-            
+            assert payload is not None  # entities are always stored with a payload
+
             # Create minimal entity from payload (for context assembly)
             entity_data = {
                 "id": UUID(payload["entity_id"]),
@@ -358,7 +372,7 @@ class VectorDatabase:
         query_embedding = self._encode_text(searchable_text)
         
         # Exclude the entity itself if requested
-        must_not_conditions = []
+        must_not_conditions: List[models.Condition] = []
         if exclude_self:
             must_not_conditions.append(
                 models.FieldCondition(
@@ -370,7 +384,9 @@ class VectorDatabase:
         search_filter = None
         if must_not_conditions:
             search_filter = models.Filter(must_not=must_not_conditions)
-        
+
+        if self.client is None:
+            raise RuntimeError("Vector database not connected")
         search_result = await self.client.search(
             collection_name=self.collection_name,
             query_vector=query_embedding,
@@ -381,6 +397,7 @@ class VectorDatabase:
         results = []
         for point in search_result:
             payload = point.payload
+            assert payload is not None  # entities are always stored with a payload
             entity_data = {
                 "id": UUID(payload["entity_id"]),
                 "type": EntityType(payload["entity_type"]),
@@ -396,6 +413,8 @@ class VectorDatabase:
     
     async def delete_entity(self, entity_id: UUID) -> None:
         """Delete entity from vector database"""
+        if self.client is None:
+            raise RuntimeError("Vector database not connected")
         await self.client.delete(
             collection_name=self.collection_name,
             points_selector=models.PointIdsList(

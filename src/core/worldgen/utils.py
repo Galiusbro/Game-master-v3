@@ -9,6 +9,7 @@ Provides shared functions for:
 - Metadata handling
 """
 
+import random
 from typing import Any, Dict, List, Optional
 
 from core.world_service import world_service
@@ -112,7 +113,7 @@ def normalize_coordinates(x: int, y: int, grid_size: int) -> List[float]:
 def estimate_population(
     base_pop: int,
     variation: int,
-    rng,
+    rng: random.Random,
     multipliers: Optional[Dict[str, float]] = None,
 ) -> int:
     """Estimate population with random variation and optional multipliers.
@@ -169,7 +170,7 @@ def calculate_distance_km(
 def generate_age_range(
     min_age: int,
     max_age: int,
-    rng,
+    rng: random.Random,
     age_type: str = "founded",
 ) -> int:
     """Generate a random age within specified range.

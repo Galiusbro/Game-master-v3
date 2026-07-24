@@ -19,7 +19,7 @@ try:
     from sklearn.metrics.pairwise import cosine_similarity
     EMBEDDINGS_AVAILABLE = True
 except ImportError:
-    np = None
+    np = None  # type: ignore[assignment]  # optional dependency fallback
     SentenceTransformer = None
     cosine_similarity = None
     EMBEDDINGS_AVAILABLE = False
@@ -97,7 +97,7 @@ class ClassificationResult:
     category: str
     subcategory: Optional[str] = None
     confidence: float = 0.0
-    metadata: Dict[str, Any] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class CommandClassificationService:
@@ -106,14 +106,15 @@ class CommandClassificationService:
     Uses modern embedding-based approach instead of keyword matching.
     """
     
-    def __init__(self, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2"):
+    def __init__(self, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2") -> None:
         self.model_name = model_name
-        self.model = None
+        # SentenceTransformer instance once lazily loaded (None until then)
+        self.model: Any = None
         self.training_data: Dict[ClassificationCategory, List[ClassificationExample]] = {}
         self.category_embeddings: Dict[str, Any] = {}  # np.ndarray when available
         self._initialize_training_data()
         
-    def _load_model(self):
+    def _load_model(self) -> None:
         """Lazy load the sentence transformer model"""
         # Suppress specific FutureWarning from transformers' BertSdpaSelfAttention about
         # encoder_attention_mask deprecation, which we do not control from here
@@ -141,7 +142,7 @@ class CommandClassificationService:
                     logger.error(f"Failed to load fallback model: {e2}")
                     self.model = None
     
-    def _initialize_training_data(self):
+    def _initialize_training_data(self) -> None:
         """Initialize training data for all classification categories from external files"""
         
         # Load data from structured files
@@ -205,15 +206,15 @@ class CommandClassificationService:
             logger.warning(f"Social intent classification failed: {e}")
             return None, 0.0
 
-    def _prepare_embeddings(self, category: ClassificationCategory):
+    def _prepare_embeddings(self, category: ClassificationCategory) -> None:
         """Prepare embeddings for a specific category"""
         if category not in self.training_data:
             return
-            
+
         self._load_model()
-        
+
         # Group examples by subcategory
-        subcategory_texts = {}
+        subcategory_texts: Dict[str, List[str]] = {}
         for example in self.training_data[category]:
             subcategory = example.subcategory or example.category
             if subcategory not in subcategory_texts:
@@ -252,7 +253,7 @@ class CommandClassificationService:
     
     def _classify_with_embeddings(self, command: str, category: ClassificationCategory, context: Optional[GameContext] = None) -> Tuple[str, float]:
         """Main embedding-based classification logic for any category"""
-        if category not in self.category_embeddings:
+        if not any(key.startswith(f"{category.value}:") for key in self.category_embeddings):
             self._prepare_embeddings(category)
         
         self._load_model()
@@ -361,11 +362,11 @@ class CommandClassificationService:
         commands: List[str], 
         category: ClassificationCategory,
         contexts: Optional[List[GameContext]] = None
-    ) -> List[Tuple[str, float]]:
+    ) -> List[Tuple[Optional[str], float]]:
         """
         Classify multiple commands at once for better performance.
         """
-        if category not in self.category_embeddings:
+        if not any(key.startswith(f"{category.value}:") for key in self.category_embeddings):
             self._prepare_embeddings(category)
         
         self._load_model()
@@ -381,7 +382,7 @@ class CommandClassificationService:
         
         # Batch encode all commands
         embeddings = self.model.encode(enhanced_commands)
-        results = []
+        results: List[Tuple[Optional[str], float]] = []
 
         for i, emb in enumerate(embeddings):
             best_match = None
@@ -405,7 +406,7 @@ class CommandClassificationService:
         Detect special events like death or resurrection.
         Replaces keyword-based event detection.
         """
-        if ClassificationCategory.SPECIAL_EVENT not in self.category_embeddings:
+        if not any(key.startswith(f"{ClassificationCategory.SPECIAL_EVENT.value}:") for key in self.category_embeddings):
             self._prepare_embeddings(ClassificationCategory.SPECIAL_EVENT)
         
         self._load_model()
@@ -432,7 +433,7 @@ class CommandClassificationService:
         Assess if content has high priority for AI processing.
         Replaces keyword-based priority detection.
         """
-        if ClassificationCategory.CONTENT_PRIORITY not in self.category_embeddings:
+        if not any(key.startswith(f"{ClassificationCategory.CONTENT_PRIORITY.value}:") for key in self.category_embeddings):
             self._prepare_embeddings(ClassificationCategory.CONTENT_PRIORITY)
         
         self._load_model()
@@ -452,7 +453,7 @@ class CommandClassificationService:
         Detect which ability score a command focuses on.
         Replaces keyword-based ability detection.
         """
-        if ClassificationCategory.ABILITY_DETECTION not in self.category_embeddings:
+        if not any(key.startswith(f"{ClassificationCategory.ABILITY_DETECTION.value}:") for key in self.category_embeddings):
             self._prepare_embeddings(ClassificationCategory.ABILITY_DETECTION)
         
         self._load_model()
@@ -1027,7 +1028,7 @@ class CommandClassificationService:
         
         return base_modifier
     
-    def add_training_example(self, category: ClassificationCategory, example: ClassificationExample):
+    def add_training_example(self, category: ClassificationCategory, example: ClassificationExample) -> None:
         """Add a new training example and update embeddings"""
         if category not in self.training_data:
             self.training_data[category] = []
@@ -1043,14 +1044,14 @@ class CommandClassificationService:
     
     def get_statistics(self) -> Dict[str, Any]:
         """Get classification service statistics"""
-        stats = {
+        stats: Dict[str, Any] = {
             "model_name": self.model_name,
             "model_loaded": self.model is not None,
             "categories": {}
         }
-        
+
         for category, examples in self.training_data.items():
-            subcategories = {}
+            subcategories: Dict[str, int] = {}
             for example in examples:
                 subcategory = example.subcategory or example.category
                 subcategories[subcategory] = subcategories.get(subcategory, 0) + 1

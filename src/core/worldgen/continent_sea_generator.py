@@ -12,6 +12,7 @@ Provides algorithms for:
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
+import numpy.typing as npt
 
 from core.worldgen.geo_engine import center_of_mask
 from core.worldgen.utils import create_location_entity, link_to_parent
@@ -24,7 +25,7 @@ from core.worldgen.classifiers import (
 )
 
 
-def calculate_geographic_properties(mask: np.ndarray, grid_size: int) -> Dict[str, Any]:
+def calculate_geographic_properties(mask: npt.NDArray[np.uint8], grid_size: int) -> Dict[str, Any]:
     """Calculate geographic properties for a landmass or water body.
     
     Args:
@@ -79,7 +80,7 @@ def calculate_geographic_properties(mask: np.ndarray, grid_size: int) -> Dict[st
 
 
 async def create_continent_entities(
-    land_components: List[np.ndarray],
+    land_components: List[npt.NDArray[np.uint8]],
     grid_size: int,
     world_id: Any,
     max_continents: int = 3,
@@ -153,7 +154,7 @@ async def create_continent_entities(
 
 
 async def create_sea_entities(
-    water_components: List[np.ndarray],
+    water_components: List[npt.NDArray[np.uint8]],
     grid_size: int,
     world_id: Any,
     max_seas: int = 5,
@@ -227,8 +228,8 @@ async def create_sea_entities(
 
 
 async def generate_continents_and_seas(
-    land_components: List[np.ndarray],
-    water_components: List[np.ndarray],
+    land_components: List[npt.NDArray[np.uint8]],
+    water_components: List[npt.NDArray[np.uint8]],
     grid_size: int,
     world_id: Any,
 ) -> Tuple[List[str], List[str], List[Dict[str, Any]], List[Dict[str, Any]]]:

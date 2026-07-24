@@ -4,7 +4,11 @@ Prometheus metrics for Game Master V3
 from prometheus_client import Counter, Histogram, Gauge
 import time
 from functools import wraps
-from typing import Callable, Any
+from typing import Callable, Any, TypeVar, cast
+
+# Type variable used so the tracking decorators preserve the exact signature
+# of the function they wrap.
+F = TypeVar("F", bound=Callable[..., Any])
 
 # AI Operations Metrics
 ai_requests_total = Counter(
@@ -94,11 +98,11 @@ world_snapshots_total = Counter(
 )
 
 
-def track_ai_operation(operation_type: str, model: str = "unknown"):
+def track_ai_operation(operation_type: str, model: str = "unknown") -> Callable[[F], F]:
     """Decorator to track AI operations"""
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: F) -> F:
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.time()
             status = "success"
             
@@ -140,16 +144,16 @@ def track_ai_operation(operation_type: str, model: str = "unknown"):
                     model=model,
                     status=status
                 ).inc()
-        
-        return wrapper
+
+        return cast(F, wrapper)
     return decorator
 
 
-def track_context_building(operation_type: str):
+def track_context_building(operation_type: str) -> Callable[[F], F]:
     """Decorator to track context building operations"""
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: F) -> F:
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.time()
             
             try:
@@ -178,16 +182,16 @@ def track_context_building(operation_type: str):
                 context_build_duration.labels(
                     operation_type=operation_type
                 ).observe(duration)
-        
-        return wrapper
+
+        return cast(F, wrapper)
     return decorator
 
 
-def track_db_operation(db_type: str, operation: str):
+def track_db_operation(db_type: str, operation: str) -> Callable[[F], F]:
     """Decorator to track database operations"""
-    def decorator(func: Callable) -> Callable:
+    def decorator(func: F) -> F:
         @wraps(func)
-        async def wrapper(*args, **kwargs) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             start_time = time.time()
             status = "success"
             
@@ -209,12 +213,12 @@ def track_db_operation(db_type: str, operation: str):
                     operation=operation,
                     status=status
                 ).inc()
-        
-        return wrapper
+
+        return cast(F, wrapper)
     return decorator
 
 
-def update_world_metrics(players_count: int, entities_by_type: dict):
+def update_world_metrics(players_count: int, entities_by_type: dict[str, int]) -> None:
     """Update world state metrics"""
     active_players.set(players_count)
     
@@ -222,7 +226,7 @@ def update_world_metrics(players_count: int, entities_by_type: dict):
         world_entities_total.labels(entity_type=entity_type).set(count)
 
 
-def log_event_metric(event_type: str, actor_type: str):
+def log_event_metric(event_type: str, actor_type: str) -> None:
     """Log event creation metric"""
     events_logged_total.labels(
         event_type=event_type,
@@ -230,6 +234,6 @@ def log_event_metric(event_type: str, actor_type: str):
     ).inc()
 
 
-def log_snapshot_metric(trigger_type: str):
+def log_snapshot_metric(trigger_type: str) -> None:
     """Log world snapshot creation metric"""
     world_snapshots_total.labels(trigger_type=trigger_type).inc()

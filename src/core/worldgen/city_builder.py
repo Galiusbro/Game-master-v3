@@ -122,7 +122,7 @@ async def build_minimal_city_structure(
             bv = _clamp01(dv + (rng.random() - 0.5) * 0.01)
             
             # Prepare building metadata
-            building_meta = {"kind": bkind}
+            building_meta: Dict[str, Any] = {"kind": bkind}
             if "shop_kind" in meta:
                 building_meta["business_profile"] = {"shop_kind": meta["shop_kind"]}
             if "service" in meta:

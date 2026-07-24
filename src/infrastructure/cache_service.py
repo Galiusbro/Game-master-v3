@@ -5,7 +5,7 @@ Provides intelligent caching for database queries and AI responses
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from uuid import UUID
 import hashlib
 from datetime import datetime, timedelta
@@ -48,7 +48,7 @@ class CacheKey:
 class CacheService:
     """Redis-based caching service"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.redis: Optional[redis.Redis] = None
         self.enabled = True
         
@@ -65,7 +65,7 @@ class CacheService:
             'session': 1800,         # 30 minutes - session data
         }
     
-    async def connect(self):
+    async def connect(self) -> None:
         """Connect to Redis"""
         try:
             self.redis = redis.from_url(
@@ -85,12 +85,12 @@ class CacheService:
             logger.warning(f"Failed to connect to Redis: {e}")
             self.enabled = False
     
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         """Disconnect from Redis"""
         if self.redis:
             await self.redis.close()
     
-    def _make_hash(self, data: Union[str, Dict, List]) -> str:
+    def _make_hash(self, data: Union[str, Dict[str, Any], List[Any]]) -> str:
         """Create a stable hash for cache keys"""
         if isinstance(data, str):
             content = data
@@ -149,7 +149,8 @@ class CacheService:
             data = await self.redis.get(key)
             if data:
                 logger.debug(f"Cache HIT: {key}")
-                return self._deserialize(data, model_class)
+                # decode_responses=False guarantees bytes from Redis
+                return self._deserialize(cast(bytes, data), model_class)
             else:
                 logger.debug(f"Cache MISS: {key}")
                 return None
@@ -164,6 +165,7 @@ class CacheService:
         
         try:
             serialized = self._serialize(value)
+            result: Any
             if ttl:
                 result = await self.redis.setex(key, ttl, serialized)
             else:
@@ -245,7 +247,7 @@ class CacheService:
         key = CacheKey.ENTITY.format(entity_type=entity.type.value, entity_id=str(entity.id))
         return await self.set(key, entity, self.ttl['entity'])
     
-    async def invalidate_entity(self, entity_id: UUID, entity_type: Optional[EntityType] = None):
+    async def invalidate_entity(self, entity_id: UUID, entity_type: Optional[EntityType] = None) -> None:
         """Invalidate entity cache and related caches"""
         # Delete entity cache
         if entity_type:
@@ -264,7 +266,7 @@ class CacheService:
         if entity_type == EntityType.PLAYER:
             await self.delete_pattern(f"player:{entity_id}:*")
     
-    async def get_vector_search(self, query: str, entity_types: Optional[List[EntityType]] = None, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Optional[List]:
+    async def get_vector_search(self, query: str, entity_types: Optional[List[EntityType]] = None, limit: int = 10, filters: Optional[Dict[str, Any]] = None) -> Optional[List[Tuple[Any, Any]]]:
         """Get cached vector search results"""
         query_hash = self._make_hash({"q": query, "filters": filters or {}})
         types_str = ",".join(sorted([t.value for t in entity_types])) if entity_types else "all"
@@ -292,7 +294,7 @@ class CacheService:
                 EntityType.QUEST: Quest,
             }
             
-            deserialized_results = []
+            deserialized_results: List[Tuple[Any, Any]] = []
             for entity_data, score in raw_results:
                 if isinstance(entity_data, dict) and 'type' in entity_data:
                     entity_type = EntityType(entity_data['type'])
@@ -313,7 +315,7 @@ class CacheService:
             logger.warning(f"Failed to deserialize vector search cache: {e}")
             return None
     
-    async def set_vector_search(self, query: str, entity_types: Optional[List[EntityType]], limit: int, results: List, filters: Optional[Dict[str, Any]] = None) -> bool:
+    async def set_vector_search(self, query: str, entity_types: Optional[List[EntityType]], limit: int, results: List[Any], filters: Optional[Dict[str, Any]] = None) -> bool:
         """Cache vector search results"""
         query_hash = self._make_hash({"q": query, "filters": filters or {}})
         types_str = ",".join(sorted([t.value for t in entity_types])) if entity_types else "all"
@@ -325,7 +327,7 @@ class CacheService:
         )
         return await self.set(key, results, self.ttl['vector_search'])
     
-    async def get_entity_context(self, entity_id: UUID, depth: int, entity_types: Optional[List[EntityType]]) -> Optional[List]:
+    async def get_entity_context(self, entity_id: UUID, depth: int, entity_types: Optional[List[EntityType]]) -> Optional[List[Any]]:
         """Get cached entity context"""
         types_hash = self._make_hash(entity_types or [])
         key = CacheKey.ENTITY_CONTEXT.format(
@@ -335,7 +337,7 @@ class CacheService:
         )
         return await self.get(key)
     
-    async def set_entity_context(self, entity_id: UUID, depth: int, entity_types: Optional[List[EntityType]], results: List) -> bool:
+    async def set_entity_context(self, entity_id: UUID, depth: int, entity_types: Optional[List[EntityType]], results: List[Any]) -> bool:
         """Cache entity context"""
         types_hash = self._make_hash(entity_types or [])
         key = CacheKey.ENTITY_CONTEXT.format(

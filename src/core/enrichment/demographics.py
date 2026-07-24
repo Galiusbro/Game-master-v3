@@ -14,7 +14,8 @@ def _distance(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     bx, by = b
     dx = ax - bx
     dy = ay - by
-    return (dx * dx + dy * dy) ** 0.5
+    # float(...) because "float ** float" is typed as Any (may return complex)
+    return float((dx * dx + dy * dy) ** 0.5)
 
 
 def _race_prior_for_biome(biome: str) -> Dict[str, float]:
@@ -97,11 +98,11 @@ def _weighted_choice(rng: random.Random, dist: Dict[str, int]) -> str:
 
 
 async def _nearest_region_for_city(city: BaseEntity, regions: List[BaseEntity]) -> Optional[BaseEntity]:
-    c_center = tuple(city.metadata.get("center", [0.5, 0.5]))  # type: ignore
+    c_center = tuple(city.metadata.get("center", [0.5, 0.5]))
     best = None
-    best_d = 10**9
+    best_d: float = 10**9
     for reg in regions:
-        r_center = tuple(reg.metadata.get("center", [0.5, 0.5]))  # type: ignore
+        r_center = tuple(reg.metadata.get("center", [0.5, 0.5]))
         d = _distance(c_center, r_center)  # normalized distance
         if d < best_d:
             best = reg

@@ -8,6 +8,7 @@ Provides unified classification functions for:
 - Settlement types and characteristics
 """
 
+import random
 from typing import Any, Dict
 
 from .constants import (
@@ -102,7 +103,7 @@ def get_biome_characteristics(biome: str) -> Dict[str, Any]:
     return BIOME_CHARACTERISTICS.get(biome, BIOME_CHARACTERISTICS["plains"])
 
 
-def get_trade_specialization(biome: str, rng) -> str:
+def get_trade_specialization(biome: str, rng: random.Random) -> str:
     """Get trade specialization based on biome.
     
     Args:
@@ -116,7 +117,7 @@ def get_trade_specialization(biome: str, rng) -> str:
     return rng.choice(options)
 
 
-def get_road_terrain(biome: str, rng) -> str:
+def get_road_terrain(biome: str, rng: random.Random) -> str:
     """Determine road terrain based on biome.
     
     Args:
