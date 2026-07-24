@@ -2,7 +2,7 @@
 API routes for Game Master V3
 """
 import logging
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, Query
@@ -37,14 +37,14 @@ router.include_router(streaming_router)
 
 # Request/Response models
 class CreateEntityRequest(BaseModel):
-    entity_data: dict
+    entity_data: Dict[str, Any]
     entity_type: EntityType
     actor_id: Optional[UUID] = None
     session_id: Optional[UUID] = None
 
 
 class UpdateEntityRequest(BaseModel):
-    entity_data: dict
+    entity_data: Dict[str, Any]
     actor_id: Optional[UUID] = None
     session_id: Optional[UUID] = None
 
@@ -57,7 +57,7 @@ class SearchRequest(BaseModel):
 
 
 class DocsIndexRequest(BaseModel):
-    docs: List[dict]  # {id, title, text, tags?}
+    docs: List[Dict[str, Any]]  # {id, title, text, tags?}
 
 
 class DocsSearchRequest(BaseModel):
@@ -70,18 +70,18 @@ class CreateRelationshipRequest(BaseModel):
     from_entity_id: UUID
     to_entity_id: UUID
     relationship_type: str
-    properties: Optional[dict] = None
+    properties: Optional[Dict[str, Any]] = None
     actor_id: Optional[UUID] = None
     session_id: Optional[UUID] = None
 
 
 class EntityResponse(BaseModel):
-    entity: dict
+    entity: Dict[str, Any]
     entity_type: str
 
 
 class SearchResultResponse(BaseModel):
-    entity: dict
+    entity: Dict[str, Any]
     score: float
 class WorldGenRequest(BaseModel):
     """Parameters for world generation (MVP)."""
@@ -105,7 +105,7 @@ class SnapshotResponse(BaseModel):
 
 # Entity CRUD endpoints
 @router.post("/entities", response_model=EntityResponse)
-async def create_entity(request: CreateEntityRequest):
+async def create_entity(request: CreateEntityRequest) -> EntityResponse:
     """Create a new entity in the world"""
     try:
         # Map entity type to class
@@ -145,7 +145,7 @@ async def create_entity(request: CreateEntityRequest):
 async def get_entities(
     entity_type: Optional[EntityType] = Query(default=None, description="Filter by entity type"),
     limit: int = Query(default=50, ge=1, le=1000, description="Maximum entities per type")
-):
+) -> List[EntityResponse]:
     """Get all entities, optionally filtered by type"""
     try:
         if entity_type:
@@ -179,7 +179,7 @@ async def get_entities(
 
 
 @router.get("/entities/{entity_id}", response_model=Optional[EntityResponse])
-async def get_entity(entity_id: UUID, entity_type: Optional[EntityType] = None):
+async def get_entity(entity_id: UUID, entity_type: Optional[EntityType] = None) -> EntityResponse:
     """Get entity by ID"""
     try:
         entity = await world_service.get_entity(entity_id, entity_type)
@@ -200,7 +200,7 @@ async def get_entity(entity_id: UUID, entity_type: Optional[EntityType] = None):
 
 
 @router.put("/entities/{entity_id}", response_model=EntityResponse)
-async def update_entity(entity_id: UUID, request: UpdateEntityRequest):
+async def update_entity(entity_id: UUID, request: UpdateEntityRequest) -> EntityResponse:
     """Update an existing entity"""
     try:
         # Get current entity to determine type
@@ -253,7 +253,7 @@ async def delete_entity(
     entity_type: EntityType,
     actor_id: Optional[UUID] = None,
     session_id: Optional[UUID] = None,
-):
+) -> Dict[str, Any]:
     """Delete an entity"""
     try:
         actor_id = actor_id or uuid4()
@@ -280,7 +280,7 @@ async def delete_entity(
 
 # Search endpoints
 @router.post("/search", response_model=List[SearchResultResponse])
-async def search_entities(request: SearchRequest):
+async def search_entities(request: SearchRequest) -> List[SearchResultResponse]:
     """Search entities by semantic similarity"""
     try:
         results = await world_service.search_entities(
@@ -305,7 +305,7 @@ async def search_entities(request: SearchRequest):
 
 # RAG Docs endpoints
 @router.post("/rag/docs/index")
-async def index_docs(request: DocsIndexRequest):
+async def index_docs(request: DocsIndexRequest) -> Dict[str, Any]:
     try:
         docs_payload = []
         for d in request.docs:
@@ -322,7 +322,7 @@ async def index_docs(request: DocsIndexRequest):
 
 
 @router.post("/rag/docs/search")
-async def search_docs(request: DocsSearchRequest):
+async def search_docs(request: DocsSearchRequest) -> List[Dict[str, Any]]:
     try:
         results = await world_service.search_docs(query=request.query, limit=request.limit, tags=request.tags)
         return [
@@ -342,7 +342,7 @@ async def get_entity_context(
     entity_id: UUID,
     max_depth: int = Query(default=2, ge=1, le=5),
     entity_types: Optional[List[EntityType]] = Query(default=None),
-):
+) -> List[EntityResponse]:
     """Get contextual entities related to the given entity"""
     try:
         context_entities = await world_service.get_entity_context(
@@ -366,7 +366,7 @@ async def get_entity_context(
 
 # Relationship endpoints
 @router.post("/relationships")
-async def create_relationship(request: CreateRelationshipRequest):
+async def create_relationship(request: CreateRelationshipRequest) -> Dict[str, Any]:
     """Create a relationship between entities"""
     try:
         actor_id = request.actor_id or uuid4()
@@ -395,7 +395,7 @@ async def create_relationship(request: CreateRelationshipRequest):
 
 # Snapshot and history endpoints
 @router.post("/snapshots", response_model=SnapshotResponse)
-async def create_snapshot(created_by: str = "api_user"):
+async def create_snapshot(created_by: str = "api_user") -> SnapshotResponse:
     """Create a world snapshot"""
     try:
         snapshot_id = await world_service.create_world_snapshot(created_by=created_by)
@@ -411,16 +411,18 @@ async def create_snapshot(created_by: str = "api_user"):
 
 
 @router.post("/snapshots/{snapshot_id}/rollback")
-async def rollback_to_snapshot(snapshot_id: UUID):
-    """Rollback world to a previous snapshot"""
+async def rollback_to_snapshot(snapshot_id: UUID) -> Dict[str, Any]:
+    """Rollback the world to a previous snapshot via reverse event replay."""
     try:
-        success = await world_service.rollback_to_snapshot(snapshot_id)
-        
-        if not success:
-            raise HTTPException(status_code=400, detail="Rollback failed")
-        
-        return {"message": "Rollback initiated successfully"}
-        
+        report = await world_service.rollback_to_snapshot(snapshot_id)
+
+        return {
+            "message": "Rollback completed",
+            "report": report,
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:
@@ -429,7 +431,9 @@ async def rollback_to_snapshot(snapshot_id: UUID):
 
 
 @router.get("/entities/{entity_id}/history")
-async def get_entity_history(entity_id: UUID, limit: int = Query(default=100, ge=1, le=1000)):
+async def get_entity_history(
+    entity_id: UUID, limit: int = Query(default=100, ge=1, le=1000)
+) -> List[Dict[str, Any]]:
     """Get change history for an entity"""
     try:
         history = await world_service.get_entity_history(entity_id, limit)
@@ -454,7 +458,7 @@ async def get_entity_history(entity_id: UUID, limit: int = Query(default=100, ge
 
 
 @router.get("/sessions/{session_id}/changes")
-async def get_session_changes(session_id: UUID):
+async def get_session_changes(session_id: UUID) -> List[Dict[str, Any]]:
     """Get all changes for a session"""
     try:
         changes = await world_service.get_session_changes(session_id)
@@ -483,7 +487,7 @@ async def get_session_changes(session_id: UUID):
 async def get_recent_changes(
     limit: int = Query(default=100, ge=1, le=1000),
     entity_types: Optional[List[EntityType]] = Query(default=None),
-):
+) -> List[Dict[str, Any]]:
     """Get recent changes with optional filters"""
     try:
         changes = await world_service.get_recent_changes(
@@ -511,7 +515,7 @@ async def get_recent_changes(
 
 # World generation endpoint (MVP)
 @router.post("/world/generate")
-async def generate_world_endpoint(req: WorldGenRequest):
+async def generate_world_endpoint(req: WorldGenRequest) -> Dict[str, Any]:
     """Generate a minimal macro world and return summary."""
     try:
         summary = await generate_world({k: v for k, v in req.dict().items() if v is not None})
@@ -522,7 +526,7 @@ async def generate_world_endpoint(req: WorldGenRequest):
 
 
 @router.post("/world/enrich")
-async def enrich_world_endpoint(req: WorldEnrichRequest):
+async def enrich_world_endpoint(req: WorldEnrichRequest) -> Dict[str, Any]:
     """Apply AI enrichment to an existing world."""
     try:
         from core.worldgen.ai_enrichment_service import ai_world_enrichment_service
@@ -556,7 +560,7 @@ async def enrich_world_endpoint(req: WorldEnrichRequest):
         return {"success": False, "error": str(e)}
 
 
-async def _build_world_summary_from_existing(world_id: str) -> dict:
+async def _build_world_summary_from_existing(world_id: str) -> Dict[str, Any]:
     """Build world summary from existing entities in the database."""
     try:
         # 1) Verify world exists
@@ -587,7 +591,7 @@ async def _build_world_summary_from_existing(world_id: str) -> dict:
             return False
 
         # 3) Collect locations strictly under this world
-        summary: dict = {
+        summary: Dict[str, Any] = {
             "continents": [],
             "seas": [],
             "regions": [],
@@ -666,7 +670,7 @@ async def _build_world_summary_from_existing(world_id: str) -> dict:
                     continue
 
         # 5) De-duplicate while preserving order
-        def _uniq(seq):
+        def _uniq(seq: List[Any]) -> List[Any]:
             return list(dict.fromkeys(seq))
         for key in [
             "continents","seas","regions","rivers","cities","towns","villages",
@@ -695,7 +699,7 @@ async def enrich_demographics(
     world_id: Optional[str] = None,
     include_towns: bool = False,
     max_npcs_per_settlement: int = 100,
-):
+) -> Dict[str, Any]:
     """Enrich world with race distributions and assign NPC races based on biomes.
     Requires the world to be generated first.
     """
@@ -713,7 +717,9 @@ async def enrich_demographics(
 
 
 @router.get("/world/{world_id}/export")
-async def export_world(world_id: UUID, max_depth: int = 6, include_npcs: bool = True, save: bool = True):
+async def export_world(
+    world_id: UUID, max_depth: int = 6, include_npcs: bool = True, save: bool = True
+) -> Dict[str, Any]:
     """Export all locations (and NPCs optionally) belonging to a world into a JSON file.
 
     Traverses the graph from the `world_id` down to depth and collects location IDs,
@@ -771,7 +777,7 @@ async def export_world(world_id: UUID, max_depth: int = 6, include_npcs: bool = 
                 except Exception:
                     continue
 
-        def _jsonify(obj):
+        def _jsonify(obj: Any) -> Any:
             if isinstance(obj, (str, int, float, bool)) or obj is None:
                 return obj
             try:
@@ -820,7 +826,7 @@ async def export_world(world_id: UUID, max_depth: int = 6, include_npcs: bool = 
 
 
 @router.get("/cache/stats")
-async def get_cache_stats():
+async def get_cache_stats() -> Dict[str, Any]:
     """Get cache performance statistics"""
     try:
         stats = await cache_service.get_stats()

@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 class WorldService:
     """Central service for managing world state and operations"""
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.is_initialized = False
     
     async def initialize(self) -> None:
@@ -201,7 +201,7 @@ class WorldService:
         
         try:
             # Delete from graph database
-            deleted_from_graph = await graph_db.delete_entity(entity_id)
+            deleted_from_graph: bool = await graph_db.delete_entity(entity_id)
             
             # Delete from vector database
             await vector_db.delete_entity(entity_id)
@@ -271,12 +271,12 @@ class WorldService:
         
         # Try cache first (for simple searches without graph context)
         if not include_graph_context:
-            cached_results = await cache_service.get_vector_search(query, entity_types, limit, filters)
+            cached_results: Optional[List[Tuple[BaseEntity, float]]] = await cache_service.get_vector_search(query, entity_types, limit, filters)
             if cached_results:
                 return cached_results
-        
+
         # Cache miss - perform search
-        vector_results = await vector_db.search_entities(
+        vector_results: List[Tuple[BaseEntity, float]] = await vector_db.search_entities(
             query=query,
             limit=limit,
             entity_types=entity_types,
@@ -315,7 +315,7 @@ class WorldService:
                 logger.warning(f"Failed to index doc {doc_id}: {e}")
         return count
 
-    async def search_docs(self, query: str, limit: int = 5, tags: Optional[List[str]] = None):
+    async def search_docs(self, query: str, limit: int = 5, tags: Optional[List[str]] = None) -> Any:
         return await vector_db.search_docs(query=query, limit=limit, tags=tags)
     
     async def get_entity_context(
@@ -327,12 +327,12 @@ class WorldService:
         """Get contextual entities related to the given entity with caching"""
         
         # Try cache first
-        cached_context = await cache_service.get_entity_context(entity_id, max_depth, entity_types)
+        cached_context: Optional[List[BaseEntity]] = await cache_service.get_entity_context(entity_id, max_depth, entity_types)
         if cached_context:
             return cached_context
-        
+
         # Cache miss - get from graph DB
-        context_entities = await graph_db.traverse_graph(
+        context_entities: List[BaseEntity] = await graph_db.traverse_graph(
             start_entity_id=entity_id,
             max_depth=max_depth,
             entity_types=entity_types,
@@ -350,7 +350,7 @@ class WorldService:
     ) -> List[BaseEntity]:
         """Get all entities of a specific type"""
         try:
-            entities = await graph_db.get_entities_by_type(entity_type, limit)
+            entities: List[BaseEntity] = await graph_db.get_entities_by_type(entity_type, limit)
             logger.debug(f"Retrieved {len(entities)} {entity_type.value} entities")
             return entities
         except Exception as e:
@@ -394,7 +394,7 @@ class WorldService:
         event_id = uuid4()
         
         try:
-            success = await graph_db.create_relationship(
+            success: bool = await graph_db.create_relationship(
                 from_id=from_entity_id,
                 to_id=to_entity_id,
                 relationship_type=relationship_type,
@@ -456,7 +456,7 @@ class WorldService:
             }
             
             # Store snapshot
-            snapshot_id = await event_store.create_world_snapshot(
+            snapshot_id: UUID = await event_store.create_world_snapshot(
                 snapshot_data=snapshot_data,
                 created_by=created_by,
                 metadata=metadata,
@@ -490,40 +490,159 @@ class WorldService:
         else:
             return data
     
-    async def rollback_to_snapshot(self, snapshot_id: UUID) -> bool:
-        """Rollback world to a previous snapshot"""
-        
+    async def rollback_to_snapshot(self, snapshot_id: UUID) -> Dict[str, Any]:
+        """Rollback the world to a previous snapshot by reverse event replay.
+
+        Every mutation goes through this service and is logged with
+        before/after state (updates and deletes also carry rollback_data),
+        so rolling back means walking the event log since the snapshot in
+        reverse and applying the inverse of each change to the graph and
+        vector stores:
+
+        - CREATE  -> delete the entity
+        - UPDATE  -> restore the pre-update state
+        - DELETE  -> re-create the entity from rollback_data
+
+        The replay is best-effort per event: a failure to revert one event
+        is recorded and the replay continues, so a single corrupt entry
+        cannot brick the whole rollback. Returns a report with counts and
+        any per-event errors.
+        """
+
+        snapshot = await event_store.get_world_snapshot(snapshot_id)
+        if not snapshot:
+            raise ValueError(f"Snapshot {snapshot_id} not found")
+
+        # Mark the rollback in the event log before mutating anything.
+        await event_store.rollback_to_snapshot(snapshot_id)
+
+        changes = await event_store.get_changes_since_snapshot(snapshot["timestamp"])
+
+        report: Dict[str, Any] = {
+            "snapshot_id": str(snapshot_id),
+            "events_seen": len(changes),
+            "reverted_creates": 0,
+            "reverted_updates": 0,
+            "restored_deletes": 0,
+            "skipped": 0,
+            "errors": [],
+        }
+
+        for change in reversed(changes):
+            try:
+                # System/bookkeeping events and failed attempts are not
+                # world mutations — nothing to revert.
+                if change.entity_type == EntityType.EVENT or change.confidence_score == 0.0:
+                    report["skipped"] += 1
+                    continue
+
+                before = change.before_state or {}
+                after = change.after_state or {}
+
+                if "error" in after:
+                    report["skipped"] += 1
+                    continue
+
+                is_delete = after.get("deleted") is True
+                is_create = not before and not is_delete
+                is_update = bool(before) and not is_delete
+
+                if is_create:
+                    await graph_db.delete_entity(change.entity_id)
+                    await vector_db.delete_entity(change.entity_id)
+                    await cache_service.invalidate_entity(change.entity_id, change.entity_type)
+                    report["reverted_creates"] += 1
+
+                elif is_delete:
+                    restored = self._entity_from_state(
+                        change.rollback_data or before, change.entity_type
+                    )
+                    if restored is None:
+                        raise ValueError("cannot reconstruct entity from rollback_data")
+                    await graph_db.create_entity(restored)
+                    await vector_db.store_entity(restored)
+                    report["restored_deletes"] += 1
+
+                elif is_update:
+                    restored = self._entity_from_state(
+                        change.rollback_data or before, change.entity_type
+                    )
+                    if restored is None:
+                        raise ValueError("cannot reconstruct entity from rollback_data")
+                    await graph_db.update_entity(restored)
+                    await vector_db.update_entity(restored)
+                    await cache_service.invalidate_entity(change.entity_id, change.entity_type)
+                    report["reverted_updates"] += 1
+
+                else:
+                    report["skipped"] += 1
+
+            except Exception as e:  # best-effort: record and continue
+                logger.error(f"Rollback: failed to revert event {change.id}: {e}")
+                report["errors"].append({"event": str(change.id), "error": str(e)})
+
+        # Record the completed rollback with its report.
+        await event_store.log_change(
+            event_id=uuid4(),
+            entity_type=EntityType.EVENT,
+            entity_id=snapshot_id,
+            action_type=ActionType.WORLD_CHANGE,
+            actor_type=ActorType.SYSTEM,
+            actor_id=snapshot_id,
+            before_state={"action": "rollback_completed"},
+            after_state={
+                k: v for k, v in report.items() if k != "errors"
+            } | {"error_count": len(report["errors"])},
+            confidence_score=1.0,
+        )
+
+        logger.info(
+            "Rollback to %s complete: %d creates reverted, %d updates reverted, "
+            "%d deletes restored, %d skipped, %d errors",
+            snapshot_id,
+            report["reverted_creates"],
+            report["reverted_updates"],
+            report["restored_deletes"],
+            report["skipped"],
+            len(report["errors"]),
+        )
+        return report
+
+    def _entity_from_state(
+        self, state: Dict[str, Any], entity_type: EntityType
+    ) -> Optional[BaseEntity]:
+        """Reconstruct a typed domain entity from an event-log state dict."""
+        if not state:
+            return None
+
+        from domain.entities import NPC, Event, Item, Location, Player, Quest
+
+        entity_classes = {
+            EntityType.PLAYER: Player,
+            EntityType.NPC: NPC,
+            EntityType.LOCATION: Location,
+            EntityType.ITEM: Item,
+            EntityType.EVENT: Event,
+            EntityType.QUEST: Quest,
+        }
+        entity_class = entity_classes.get(entity_type, BaseEntity)
+
         try:
-            # Get snapshot data
-            snapshot = await event_store.get_world_snapshot(snapshot_id)
-            if not snapshot:
-                raise ValueError(f"Snapshot {snapshot_id} not found")
-            
-            # Log rollback initiation
-            await event_store.rollback_to_snapshot(snapshot_id)
-            
-            # TODO: Implement actual rollback logic
-            # This would involve:
-            # 1. Clear current world state
-            # 2. Restore entities from snapshot
-            # 3. Rebuild graph relationships
-            # 4. Update vector database
-            
-            logger.warning("Rollback requested but not fully implemented yet")
-            return True
-            
+            return entity_class(**state)
         except Exception as e:
-            logger.error(f"Failed to rollback to snapshot {snapshot_id}: {e}")
-            raise
+            logger.error(f"Failed to reconstruct {entity_type} from state: {e}")
+            return None
     
     async def get_entity_history(self, entity_id: UUID, limit: int = 100) -> List[ChangeLogEntry]:
         """Get change history for an entity"""
-        return await event_store.get_entity_history(entity_id, limit)
-    
+        history: List[ChangeLogEntry] = await event_store.get_entity_history(entity_id, limit)
+        return history
+
     async def get_session_changes(self, session_id: UUID) -> List[ChangeLogEntry]:
         """Get all changes for a session"""
-        return await event_store.get_session_changes(session_id)
-    
+        changes: List[ChangeLogEntry] = await event_store.get_session_changes(session_id)
+        return changes
+
     async def get_recent_changes(
         self,
         limit: int = 100,
@@ -531,11 +650,12 @@ class WorldService:
         actor_types: Optional[List[ActorType]] = None,
     ) -> List[ChangeLogEntry]:
         """Get recent changes with filters"""
-        return await event_store.get_recent_changes(
+        recent: List[ChangeLogEntry] = await event_store.get_recent_changes(
             limit=limit,
             entity_types=entity_types,
             actor_types=actor_types,
         )
+        return recent
 
 
 # Global world service instance
