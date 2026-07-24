@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # The suite is fully mock-based: no databases and no torch needed.
+      # sentence_transformers is stubbed by conftest when absent.
+      - name: Install test dependencies
+        run: |
+          pip install fastapi pydantic-settings sqlalchemy asyncpg neo4j \
+            qdrant-client redis openai tiktoken httpx \
+            prometheus-fastapi-instrumentator numpy \
+            pytest pytest-asyncio pytest-cov faker factory_boy mypy
+
+      - name: Type check (strict)
+        run: mypy src config --ignore-missing-imports
+
+      - name: Tests
+        run: pytest src/tests -q

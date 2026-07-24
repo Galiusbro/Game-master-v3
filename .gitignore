@@ -122,4 +122,4 @@ docker-data/
 
 # Local development
 .local/
-local_config.py
+local_config.pydocs/archive/

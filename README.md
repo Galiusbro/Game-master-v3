@@ -1,202 +1,118 @@
-# Game Master V3 - AI-Powered RPG System
+# Game Master V3
 
-Новое поколение ИИ-гейм-мастера с живым, персистентным миром.
+**An AI game master with a persistent, consistent world** — polyglot persistence (Neo4j + Qdrant + PostgreSQL + Redis) behind an async FastAPI backend, with event sourcing, snapshot rollback via reverse event replay, procedural world generation, and D&D 5e mechanics.
 
-## ✨ Ключевые особенности
+[![CI](https://github.com/Galiusbro/Game-master-v3/actions/workflows/ci.yml/badge.svg)](https://github.com/Galiusbro/Game-master-v3/actions/workflows/ci.yml)
+[![mypy: strict](https://img.shields.io/badge/mypy-strict%2C%200%20errors-blue)](pyproject.toml)
+[![Tests](https://img.shields.io/badge/tests-108%20passed-brightgreen)](src/tests)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-- **🌍 Живой мир**: Все изменения сохраняются и влияют на будущие события
-- **🧠 Semantic Search**: Умный поиск по смыслу через Vector DB
-- **📈 Graph Relations**: Сложные связи между всеми объектами мира
-- **📝 Event Sourcing**: Полная история изменений с возможностью отката
-- **👥 Multi-player**: Консистентный мир для множественных игроков
-- **🔍 Anti-hallucination**: Валидация ответов ИИ против базы знаний
+Players type natural language ("attack the innkeeper with my axe"); the system classifies intent, resolves it through real D&D 5e dice mechanics, mutates a persistent world across four data stores, logs every change to an event store, and narrates the outcome with an LLM — with a validation pass that flags entities the LLM invented.
 
-## 🏗️ Архитектура
+## Architecture
 
-- **Graph DB**: Neo4j для связей между сущностями
-- **Vector DB**: Qdrant для semantic search
-- **Event Store**: PostgreSQL для event sourcing
-- **Cache**: Redis для производительности
-- **API**: FastAPI с async/await
-- **Monitoring**: Prometheus + Grafana
+Every mutation flows through one service and lands in all the right stores:
 
-## 📁 Структура проекта
-
-```
-game_master_v3/
-├── src/
-│   ├── api/              # REST API endpoints
-│   ├── core/             # Основная бизнес-логика
-│   ├── domain/           # Entities и domain models
-│   ├── infrastructure/   # Database integrations
-│   └── tests/           # Unit & integration tests
-├── docker/              # Docker compose + configs
-├── scripts/             # Utility scripts
-├── config/              # Settings и конфигурация
-└── docs/               # Архитектурная документация
+```mermaid
+flowchart LR
+    P[Player command] --> CLS[Intent classifier<br/>embeddings + keyword fallback]
+    CLS --> H[10 action handlers<br/>combat / dialogue / magic / trade ...]
+    H --> DICE[D&D 5e dice engine]
+    H --> WS[WorldService]
+    WS --> NEO[(Neo4j<br/>knowledge graph)]
+    WS --> QD[(Qdrant<br/>semantic search)]
+    WS --> PG[(PostgreSQL<br/>event store + snapshots)]
+    WS --> RD[(Redis<br/>cache)]
+    H --> AI[LLM narration<br/>+ entity validation]
+    AI --> M[Prometheus /metrics]
 ```
 
-## 🚀 Быстрый старт
+- **Neo4j** holds the knowledge graph: entities and their relationships, traversed for context.
+- **Qdrant** powers semantic entity resolution ("the grumpy innkeeper" → the right NPC).
+- **PostgreSQL** is the event store: every change is appended with before/after state and rollback data.
+- **Redis** caches entities, searches, and AI responses with per-type TTLs.
 
-### Предварительные требования
+## Event sourcing with real rollback
 
-- Docker & Docker Compose
-- Python 3.11+
-- Make (опционально)
-
-### Установка и запуск
+Every entity mutation is logged with its inverse. Rolling back to a snapshot replays the event log in reverse — creates are deleted, updates restored, deletes re-created — across the graph and vector stores, with a per-event error report:
 
 ```bash
-# 1. Клонировать и перейти в директорию
-cd game_master_v3
-
-# 2. Запустить все сервисы и инициализировать данные
-make dev
-
-# ИЛИ вручную:
-make start          # Запуск Docker services
-make install        # Установка Python зависимостей
-make init          # Инициализация БД с примером мира
+curl -X POST localhost:8000/api/v1/snapshots/{snapshot_id}/rollback
+# → {"message": "Rollback completed",
+#    "report": {"events_seen": 12, "reverted_creates": 3,
+#               "reverted_updates": 7, "restored_deletes": 1,
+#               "skipped": 1, "errors": []}}
 ```
 
-### Проверка работы
+The replay is covered by 8 dedicated unit tests (reverse ordering, best-effort error handling, system-event skipping).
+
+## Procedural world generation
+
+`src/core/worldgen/` (17 modules) builds a world from a seed: fractal-noise heightmap → continents and seas → rivers → regions and biomes → settlements, roads and politics → NPCs and bosses → optional LLM enrichment of names, lore, and relationships. A generated sample ships in [`world_exports/sample_world.json`](world_exports/).
 
 ```bash
-# Статус сервисов
-make status
-
-# Логи
-make logs
-
-# Пример использования API
-python example_usage.py
+curl -X POST localhost:8000/api/v1/world/generate -d '{"seed": "demo"}' -H "Content-Type: application/json"
 ```
 
-## 📡 Доступные сервисы
+## Honest notes on the AI layer
 
-После запуска доступны:
+- **Entity validation, not magic:** LLM output is checked against the context entities served to the prompt; unknown proper nouns flag the response (`hallucination_detected`), lower its confidence, and increment a Prometheus counter. It is a heuristic consistency check — enforcement (regeneration on failure) is on the roadmap.
+- **Degrades without a key:** no `OPENAI_API_KEY` → the app boots and plays with deterministic fallback narration; dice mechanics and world state work fully.
+- **Observability:** request metrics via instrumentator + custom AI metrics (tokens, confidence, hallucination rate) at `/metrics`; a Grafana dashboard example lives in `docker/grafana/`.
 
-- **API**: http://localhost:8000
-- **API Docs**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
-- **Prometheus Metrics**: http://localhost:8000/metrics
-- **Neo4j Browser**: http://localhost:7474 (neo4j/gamemaster123)
-- **Qdrant Dashboard**: http://localhost:6333/dashboard
-- **Grafana**: http://localhost:3000 (admin/admin)
-- **Prometheus**: http://localhost:9090
-
-## 🧪 Тестирование
+## Quick start
 
 ```bash
-# Запуск unit tests
-make test
+git clone https://github.com/Galiusbro/Game-master-v3.git && cd Game-master-v3
+cp .env.example .env          # add OPENAI_API_KEY for LLM narration (optional)
 
-# Пример использования API
-python example_usage.py
-
-# Тестирование AI возможностей (требует OpenAI API key)
-export OPENAI_API_KEY='your-api-key-here'
-make demo-ai
+make start                    # docker compose: Neo4j, Qdrant, Postgres, Redis, Prometheus, Grafana
+make init                     # schema + demo world
+make dev                      # FastAPI on :8000
 ```
 
-## 🛠️ Development
-
-### Команды Make
+Play from the terminal:
 
 ```bash
-make help          # Показать все команды
-make start         # Запустить сервисы
-make stop          # Остановить сервисы
-make clean         # Очистить данные
-make init          # Инициализировать БД
-make logs          # Показать логи
-make api           # Запуск API локально
-make reset         # Полный сброс и перезапуск
+curl -X POST localhost:8000/api/v1/game/command \
+  -H "Content-Type: application/json" \
+  -d '{"player_id": "...", "command": "talk to the innkeeper about the old ruins"}'
 ```
 
-### Архитектурные фазы
+Interactive docs: `localhost:8000/docs` (37 endpoints: entity CRUD, semantic search, game commands, streaming SSE, snapshots/rollback, world generation).
 
-✅ **Phase 1**: Core data layer + basic orchestrator  
-✅ **Phase 2**: AI integration + quality control  
-⏳ **Phase 3**: Performance & scale optimization  
-⏳ **Phase 4**: Game logic & balance
+## Development
 
-## 🎮 Пример использования
-
-Создан мир с таверной "The Prancing Pony", где есть:
-
-- 🏠 **Локация**: The Prancing Pony tavern
-- 👤 **NPC**: Barliman Butterbur (трактирщик)
-- 🍺 **Предмет**: Mug of Ale
-- 🎭 **Игрок**: Adventurer
-
-```python
-# Поиск по миру
-POST /api/v1/search
-{
-  "query": "tavern ale bartender",
-  "limit": 5
-}
-
-# Получение контекста локации
-GET /api/v1/entities/{tavern_id}/context
-
-# История изменений
-GET /api/v1/entities/{entity_id}/history
-
-# AI Features (Phase 2) - требует OPENAI_API_KEY
-# NPC диалоги
-POST /api/v1/ai/npc/dialogue
-{
-  "player_id": "uuid",
-  "npc_id": "uuid",
-  "player_message": "Hello! Tell me about this place."
-}
-
-# Описание мира
-POST /api/v1/ai/world/describe
-{
-  "player_id": "uuid",
-  "request": "Describe what I see around me"
-}
-
-# Предварительный просмотр контекста ИИ
-GET /api/v1/ai/context/preview/{player_id}
-
-# Prometheus метрики
-GET /metrics
+```bash
+pytest src/tests -q            # 108 tests, no live services needed (fully mocked)
+mypy src config                # strict config, 0 errors
+make test-coverage
 ```
 
-## 📊 Мониторинг
+The test suite runs without any of the four databases — infrastructure clients are mocked at the module boundary, which is also how CI runs.
 
-Система предоставляет детальные Prometheus метрики:
+## Project layout
 
-### AI Operations
+```
+src/
+  api/            routes + 10 natural-language action handlers
+  core/           world service, event sourcing, dice engine, semantic parser, worldgen/
+  domain/         typed Pydantic entities (Player, NPC, Location, Item, Quest, ...)
+  infrastructure/ neo4j / qdrant / redis / openai clients, intent classifier
+  monitoring/     Prometheus metrics
+  tests/          108 unit/API tests (mock-based)
+examples/         runnable demo scripts (live stack required)
+docker/           full local stack incl. Prometheus + Grafana
+```
 
-- `gamemaster_ai_requests_total` - Общее количество AI запросов
-- `gamemaster_ai_request_duration_seconds` - Время выполнения AI запросов
-- `gamemaster_ai_tokens_total` - Количество использованных токенов
-- `gamemaster_ai_confidence_score` - Показатели уверенности AI
-- `gamemaster_ai_hallucinations_total` - Обнаруженные галлюцинации
+## Roadmap
 
-### Context Building
+- [ ] Enforcement mode for entity validation (regenerate on hallucination)
+- [ ] Scheduled snapshots + retention
+- [ ] Multi-provider LLM (Anthropic / local) behind the narration interface
+- [ ] Wire the remaining DB-level metrics into Grafana
+- [ ] RAG docs search: store chunk text in payloads
 
-- `gamemaster_context_entities_total` - Количество сущностей в контексте
-- `gamemaster_context_build_duration_seconds` - Время сборки контекста
+## License
 
-### Database Operations
-
-- `gamemaster_db_operations_total` - Операции с базами данных
-- `gamemaster_db_operation_duration_seconds` - Время выполнения запросов
-
-Доступ к метрикам: http://localhost:8000/metrics
-
-## 📚 Документация
-
-- [Техническая архитектура](docs/tech.md)
-- [Концепция продукта](docs/description.md)
-- [Q&A по реализации](docs/QA.md)
-
-## 🤝 Contributing
-
-Проект находится в активной разработке. Основные компоненты Phase 1 реализованы и готовы для тестирования и развития.
+MIT
