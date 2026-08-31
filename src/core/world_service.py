@@ -40,14 +40,14 @@ class WorldService:
             )
             
             # Initialize AI service if API key is provided
-            if hasattr(settings, 'openai_api_key') and settings.openai_api_key:
+            if settings.llm_api_key:
                 try:
                     await ai_service.initialize()
                     logger.info("AI Service initialized successfully")
                 except Exception as e:
                     logger.warning(f"AI Service initialization failed (will continue without AI): {e}")
             else:
-                logger.info("AI Service skipped (no OpenAI API key provided)")
+                logger.info("AI Service skipped (no LLM API key provided)")
             
             self.is_initialized = True
             logger.info("World Service initialized successfully")

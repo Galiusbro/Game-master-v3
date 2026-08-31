@@ -227,11 +227,18 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         }
     
     async def initialize(self) -> None:
-        """Initialize AI service with OpenAI client"""
+        """Initialize AI service with the configured provider's client"""
         try:
-            # Initialize OpenAI client
-            openai.api_key = settings.openai_api_key
-            self.client = openai.AsyncOpenAI(api_key=settings.openai_api_key)
+            # Gemini speaks the OpenAI protocol, so one client serves both;
+            # only the key and base URL differ.
+            openai.api_key = settings.llm_api_key
+            self.client = openai.AsyncOpenAI(
+                api_key=settings.llm_api_key,
+                base_url=settings.llm_base_url,
+            )
+            logger.info(
+                f"LLM provider: {settings.llm_provider}, model: {settings.llm_model}"
+            )
             
             # Initialize tokenizer for token counting
             try:
@@ -261,16 +268,16 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             raise
     
     async def _test_connection(self) -> None:
-        """Test OpenAI API connection"""
+        """Test the configured LLM provider's connection"""
         try:
-            response = await self.client.chat.completions.create(
+            response = await self._create_completion(
                 model=settings.llm_model,
                 messages=[{"role": "user", "content": "Test connection"}],
                 max_completion_tokens=10
             )
-            logger.info("OpenAI API connection successful")
+            logger.info(f"{settings.llm_provider} API connection successful")
         except Exception as e:
-            logger.error(f"OpenAI API connection failed: {e}")
+            logger.error(f"{settings.llm_provider} API connection failed: {e}")
             raise
     
     def count_tokens(self, text: str) -> float:
@@ -285,6 +292,27 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         breakdown: Dict[str, float] = {}
         total = 0.0
         
+    async def _create_completion(self, **kwargs: Any) -> Any:
+        """Single entry point for chat completions.
+
+        Provider-specific request parameters are applied here so the call
+        sites stay provider-agnostic.
+        """
+        extras = settings.llm_extra_params
+        try:
+            return await self.client.chat.completions.create(**{**extras, **kwargs})
+        except openai.BadRequestError:
+            # Provider extras are not universally accepted — Gemini takes
+            # reasoning_effort on some models and rejects it on others.
+            # Retry plainly so swapping models needs no config change.
+            if not extras:
+                raise
+            logger.warning(
+                f"Model {kwargs.get('model')} rejected provider parameters "
+                f"{list(extras)}; retrying without them"
+            )
+            return await self.client.chat.completions.create(**kwargs)
+
         for msg in messages:
             role = msg.get("role", "unknown")
             content = msg.get("content", "")
@@ -577,7 +605,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         
         try:
             # Make API call
-            response = await self.client.chat.completions.create(
+            response = await self._create_completion(
                 model=settings.llm_model,
                 messages=messages,
                 max_completion_tokens=template.max_completion_tokens,
@@ -690,7 +718,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             return cached_response
         
         try:
-            response = await self.client.chat.completions.create(
+            response = await self._create_completion(
                 model=settings.llm_model,
                 messages=messages,
                 max_completion_tokens=template.max_completion_tokens,
@@ -776,7 +804,7 @@ Armor Class: {player.stats.armor_class}
             
             logger.debug(f"Generating dice outcome narration for: {action_description}")
             
-            response = await self.client.chat.completions.create(
+            response = await self._create_completion(
                 model=settings.llm_model,
                 messages=[
                     {"role": "system", "content": template.system_prompt},
@@ -841,7 +869,7 @@ Armor Class: {player.stats.armor_class}
             
             logger.debug(f"Generating death response for dead player: {player_name}")
             
-            response = await self.client.chat.completions.create(
+            response = await self._create_completion(
                 model=settings.llm_model,
                 messages=[
                     {"role": "system", "content": template.system_prompt},
@@ -898,7 +926,7 @@ Armor Class: {player.stats.armor_class}
             
             logger.debug(f"Generating resurrection response for revived player: {player_name}")
             
-            response = await self.client.chat.completions.create(
+            response = await self._create_completion(
                 model=settings.llm_model,
                 messages=[
                     {"role": "system", "content": template.system_prompt},
@@ -1084,7 +1112,7 @@ Armor Class: {player.stats.armor_class}
         ]
         
         try:
-            response = await self.client.chat.completions.create(
+            response = await self._create_completion(
                 model=settings.llm_model,
                 messages=messages,
                 max_completion_tokens=max_completion_tokens,
@@ -1129,7 +1157,7 @@ Armor Class: {player.stats.armor_class}
                 messages = self._optimize_context_messages(messages, int(settings.context_max_tokens * 0.95))
             
             # Stream from OpenAI
-            stream = await self.client.chat.completions.create(
+            stream = await self._create_completion(
                 model=settings.llm_model,
                 messages=messages,
                 max_completion_tokens=template.max_completion_tokens,
