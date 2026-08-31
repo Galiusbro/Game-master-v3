@@ -178,7 +178,10 @@ async def handle_dialogue(
     dialogue_req = NPCDialogueRequest(
         player_id=request.player_id,
         npc_id=parsed.target_npc_id,
-        player_message=parsed.message or "Hello",
+        # The parser only fills `message` when the player quoted their words
+        # or used a colon. Otherwise the command itself is what they said —
+        # the old "Hello" default meant the NPC never heard the question.
+        player_message=parsed.message or request.command,
         situation_context="",
         session_id=request.session_id
     )

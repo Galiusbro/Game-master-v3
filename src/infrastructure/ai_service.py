@@ -79,6 +79,10 @@ CRITICAL RULES:
 - Maintain personality consistency throughout the conversation  
 - If you lack information to answer something, say so in character
 - Reference only entities and facts explicitly provided in context
+- Answer what was actually asked; do not deflect into small talk
+- If the conversation is already under way, continue it. Do not greet the
+  player again, do not reintroduce yourself, and do not repeat an offer
+  they have already heard
 
 Your responses should be immersive, in-character dialogue that advances the story.""",
                 user_template="""CONTEXT:
@@ -86,6 +90,9 @@ Your responses should be immersive, in-character dialogue that advances the stor
 
 NPC PROFILE:
 {npc_profile}
+
+CONVERSATION SO FAR:
+{history}
 
 CURRENT SITUATION:
 {situation}
@@ -613,9 +620,15 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         player_action: str,
         context_entities: List[BaseEntity],
         situation: str = "",
-        max_retries: int = 2
+        max_retries: int = 2,
+        history: Optional[List[Dict[str, str]]] = None,
     ) -> AIResponse:
-        """Generate NPC dialogue response"""
+        """Generate NPC dialogue response.
+
+        `history` is the recent back-and-forth with this player, oldest
+        first. Without it the NPC has no idea it has already spoken and
+        opens every reply with the same greeting.
+        """
         start_time = time.time()
         
         # Build context from entities
@@ -628,16 +641,28 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         
         # Build NPC profile
         npc_profile = self.build_npc_profile_text(npc)
-        
+
+        # Render the exchange so far as a transcript
+        if history:
+            history_text = "\n".join(
+                f"Player: {turn.get('player', '')}\n{npc.name}: {turn.get('npc', '')}"
+                for turn in history
+            )
+        else:
+            history_text = (
+                "Nothing yet — this is the first thing the player has said to them."
+            )
+
         # Get template
         template = self.templates["npc_dialogue"]
-        
+
         # Build prompt
         messages = [
             {"role": "system", "content": template.system_prompt},
             {"role": "user", "content": template.user_template.format(
                 context=context,
                 npc_profile=npc_profile,
+                history=history_text,
                 situation=situation or "Normal conversation",
                 player_action=player_action,
                 npc_name=npc.name

@@ -44,6 +44,9 @@ class CacheKey:
     SESSION = "session:{session_id}"
     SESSION_HISTORY = "session:{session_id}:history"
 
+    # What this player and this NPC have said to each other recently
+    DIALOGUE_HISTORY = "dialogue:{player_id}:{npc_id}"
+
 
 class CacheService:
     """Redis-based caching service"""
@@ -63,6 +66,9 @@ class CacheService:
             'ai_response': 60,       # 1 minute - AI responses (short for freshness)
             'dice_narrative': 300,   # 5 minutes - dice narratives can be reused
             'session': 1800,         # 30 minutes - session data
+            # Long enough that an NPC still knows you when you come back
+            # from an errand, short enough that a stale thread expires.
+            'dialogue_history': 1800,
         }
     
     async def connect(self) -> None:
@@ -380,6 +386,41 @@ class CacheService:
         )
         return await self.set(key, results, self.ttl['entity_context'])
     
+    async def get_dialogue_history(
+        self, player_id: UUID, npc_id: UUID
+    ) -> List[Dict[str, str]]:
+        """Recent exchanges between this player and this NPC.
+
+        Short-term conversational memory only. The durable record of every
+        interaction still goes to the event log; this is what the NPC needs
+        in order not to greet the same person twice in a row.
+        """
+        key = CacheKey.DIALOGUE_HISTORY.format(
+            player_id=str(player_id), npc_id=str(npc_id)
+        )
+        history = await self.get(key)
+        if not isinstance(history, list):
+            return []
+        return [turn for turn in history if isinstance(turn, dict)]
+
+    async def append_dialogue_turn(
+        self,
+        player_id: UUID,
+        npc_id: UUID,
+        player_message: str,
+        npc_response: str,
+        max_turns: int = 6,
+    ) -> bool:
+        """Record one exchange, keeping only the most recent turns."""
+        key = CacheKey.DIALOGUE_HISTORY.format(
+            player_id=str(player_id), npc_id=str(npc_id)
+        )
+        history = await self.get_dialogue_history(player_id, npc_id)
+        history.append({"player": player_message, "npc": npc_response})
+        return await self.set(
+            key, history[-max_turns:], self.ttl['dialogue_history']
+        )
+
     async def get_ai_response(self, context_hash: str) -> Optional[str]:
         """Get cached AI response"""
         key = CacheKey.AI_RESPONSE.format(context_hash=context_hash)
