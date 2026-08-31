@@ -327,7 +327,35 @@ class CacheService:
         )
         return await self.set(key, results, self.ttl['vector_search'])
     
-    async def get_entity_context(self, entity_id: UUID, depth: int, entity_types: Optional[List[EntityType]]) -> Optional[List[Any]]:
+    def _entity_from_cached(self, data: Any) -> Optional[BaseEntity]:
+        """Rehydrate one cached record into its typed domain entity.
+
+        Cached payloads are plain JSON, so a cache hit would otherwise hand
+        callers dicts where they expect entities.
+        """
+        if isinstance(data, BaseEntity):
+            return data
+        if not isinstance(data, dict) or 'type' not in data:
+            return None
+
+        from domain.entities import Player, NPC, Location, Item, Quest
+
+        type_map = {
+            EntityType.PLAYER: Player,
+            EntityType.NPC: NPC,
+            EntityType.LOCATION: Location,
+            EntityType.ITEM: Item,
+            EntityType.QUEST: Quest,
+        }
+
+        try:
+            entity_class = type_map.get(EntityType(data['type']), BaseEntity)
+            return entity_class(**data)
+        except Exception as e:
+            logger.debug(f"Failed to deserialize cached entity: {e}")
+            return None
+
+    async def get_entity_context(self, entity_id: UUID, depth: int, entity_types: Optional[List[EntityType]]) -> Optional[List[BaseEntity]]:
         """Get cached entity context"""
         types_hash = self._make_hash(entity_types or [])
         key = CacheKey.ENTITY_CONTEXT.format(
@@ -335,7 +363,12 @@ class CacheService:
             depth=depth,
             types_hash=types_hash
         )
-        return await self.get(key)
+        raw_results = await self.get(key)
+        if not raw_results:
+            return None
+
+        entities = [e for e in (self._entity_from_cached(d) for d in raw_results) if e is not None]
+        return entities or None
     
     async def set_entity_context(self, entity_id: UUID, depth: int, entity_types: Optional[List[EntityType]], results: List[Any]) -> bool:
         """Cache entity context"""

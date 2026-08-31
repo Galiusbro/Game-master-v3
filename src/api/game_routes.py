@@ -165,7 +165,7 @@ async def process_natural_command(
         
         # 2. Route to appropriate handler based on detected action
         # All conversational/social actions go through dialogue handler
-        if parsed.action in [GameAction.DIALOGUE, GameAction.PERSUASION, GameAction.DECEPTION, GameAction.PERFORMANCE, GameAction.INTIMIDATION]:
+        if parsed.action in [GameAction.DIALOGUE, GameAction.PERSUASION, GameAction.DECEPTION]:
             dialogue_result = await handle_dialogue(request, parsed)
             return GameCommandResponse(**dialogue_result)
             

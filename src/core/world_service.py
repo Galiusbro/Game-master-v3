@@ -473,13 +473,20 @@ class WorldService:
         """Recursively convert UUID and datetime objects to strings for JSON serialization"""
         from uuid import UUID
         from datetime import datetime
-        
+        from enum import Enum
+
         if isinstance(data, UUID):
             return str(data)
         elif isinstance(data, datetime):
             return data.isoformat()
         elif isinstance(data, dict):
-            return {key: self._serialize_uuids_for_json(value) for key, value in data.items()}
+            # Keys need converting too: NPC state maps player UUIDs to
+            # dispositions and cooldowns, and JSONB rejects non-string keys.
+            return {
+                str(key.value) if isinstance(key, Enum) else str(key):
+                    self._serialize_uuids_for_json(value)
+                for key, value in data.items()
+            }
         elif isinstance(data, list):
             return [self._serialize_uuids_for_json(item) for item in data]
         elif hasattr(data, '__dict__'):
