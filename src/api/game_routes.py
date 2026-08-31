@@ -15,7 +15,10 @@ from pydantic import BaseModel
 from core.world_service import world_service
 from domain.entities import Player, AbilityScore, SkillType, CharacterClass
 from core.actions import GameCommand, execute_command
+from api.auth import CurrentAccount
+from core.accounts import Account
 from core.narration import EntityNotFound
+from core.permissions import NotYours
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +62,10 @@ class GameCommandResponse(BaseModel):
 
 
 @router.post("/command", response_model=GameCommandResponse)
-async def process_natural_command(request: GameCommandRequest) -> GameCommandResponse:
+async def process_natural_command(
+    request: GameCommandRequest,
+    account: Account = CurrentAccount,
+) -> GameCommandResponse:
     """
     Process natural language game command
 
@@ -79,6 +85,7 @@ async def process_natural_command(request: GameCommandRequest) -> GameCommandRes
                 session_id=request.session_id,
                 player_id=request.player_id,
                 text=request.command,
+                account_id=account.id,
                 dialogue_context=request.dialogue_context,
             )
         )
@@ -86,6 +93,8 @@ async def process_natural_command(request: GameCommandRequest) -> GameCommandRes
 
     except HTTPException:
         raise
+    except NotYours as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except EntityNotFound as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
@@ -151,6 +160,7 @@ class CharacterStatsRequest(BaseModel):
 
 class CharacterCreationRequest(BaseModel):
     """Request to create a new character"""
+    world_id: UUID
     name: str
     character_class: CharacterClass
     ability_scores: Dict[str, Any]  # {"strength": 15, "dexterity": 14, etc.}
@@ -158,7 +168,10 @@ class CharacterCreationRequest(BaseModel):
     
 
 @router.post("/character/create", response_model=GameCommandResponse)
-async def create_character(request: CharacterCreationRequest) -> GameCommandResponse:
+async def create_character(
+    request: CharacterCreationRequest,
+    account: Account = CurrentAccount,
+) -> GameCommandResponse:
     """Create a new D&D character"""
     try:
         from domain.entities import PlayerStats
@@ -205,13 +218,16 @@ async def create_character(request: CharacterCreationRequest) -> GameCommandResp
         player = Player(
             name=request.name,
             description=f"A level 1 {request.character_class.value}",
-            stats=stats
+            stats=stats,
+            account_id=account.id,
+            world_id=request.world_id,
         )
         
         # Save to world
         created_player = await world_service.create_entity(
             entity=player,
-            actor_id=player.id  # Self-created
+            actor_id=player.id,  # Self-created
+            world_id=request.world_id,
         )
         
         return GameCommandResponse(

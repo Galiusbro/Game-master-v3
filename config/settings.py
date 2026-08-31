@@ -3,7 +3,7 @@ Configuration settings for Game Master V3
 """
 import os
 from pathlib import Path
-from typing import Any, ClassVar, Optional
+from typing import Any, ClassVar, List, Optional
 
 from pydantic import AliasChoices, Field, model_validator
 from pydantic_settings import BaseSettings
@@ -129,6 +129,26 @@ class Settings(BaseSettings):
 
         return self
 
+    @model_validator(mode="after")
+    def _refuse_unsafe_production(self) -> "Settings":
+        """Do not let a shipped default become the signing key.
+
+        Anyone holding it can mint a token for any account, so this is a
+        hard stop rather than a warning.
+        """
+        if self.environment == "production":
+            if self.jwt_secret_key == self.DEFAULT_JWT_SECRET:
+                raise ValueError(
+                    "JWT_SECRET_KEY is still the development default; "
+                    "set a real one before running in production"
+                )
+            if "*" in self.cors_origins:
+                raise ValueError(
+                    "CORS_ORIGINS is open to every site; name the origins "
+                    "that may call this API in production"
+                )
+        return self
+
     @property
     def llm_api_key(self) -> Optional[str]:
         """API key for the provider in use."""
@@ -182,9 +202,15 @@ class Settings(BaseSettings):
     ai_max_context_entities: int = Field(default=20)  # More context
 
     # Security
-    jwt_secret_key: str = Field(default="dev_secret_change_in_production")
+    DEFAULT_JWT_SECRET: ClassVar[str] = "dev_secret_change_in_production"
+    jwt_secret_key: str = Field(default=DEFAULT_JWT_SECRET)
     jwt_algorithm: str = Field(default="HS256")
     jwt_expire_minutes: int = Field(default=60)
+
+    # Browsers allowed to call the API. "*" is fine while the only client
+    # is curl and the only data is a demo world; it stops being fine the
+    # moment tokens are involved.
+    cors_origins: List[str] = Field(default=["*"])
 
     # Feature Flags
     # Context-aware intent classification prepends the game context ("In

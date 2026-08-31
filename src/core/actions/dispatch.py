@@ -22,6 +22,7 @@ from core.actions.skill_check import handle_skill_check
 from core.actions.trade import handle_trade
 from core.actions.unknown import handle_unknown
 from core.narration import EntityNotFound
+from core.permissions import NotYours
 from core.semantic_parser import semantic_parser
 from core.social_checks import BEFRIEND_INTENT_THRESHOLD
 from core.world_service import world_service
@@ -61,6 +62,14 @@ async def execute_command(command: GameCommand) -> Dict[str, Any]:
         # are not in.
         raise EntityNotFound(
             f"No character {command.player_id} in world {command.world_id}"
+        )
+
+    if player.account_id and player.account_id != command.account_id:
+        # The character has an owner and the caller is not them. Saying so
+        # plainly beats pretending the character does not exist, because
+        # the caller can see it in their own world listings.
+        raise NotYours(
+            f"Character {player.id} belongs to another account"
         )
 
     if player.effective_hit_points <= 0:

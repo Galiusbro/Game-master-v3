@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
+from api.auth_routes import router as auth_router
 from api.ai_routes import router as ai_router
 from api.game_routes import router as game_router
 from api.streaming_routes import router as streaming_router
@@ -26,6 +27,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Include AI routes  
+router.include_router(auth_router)
 router.include_router(ai_router)
 
 # Include Natural Language Game routes

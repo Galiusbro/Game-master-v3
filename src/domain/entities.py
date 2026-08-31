@@ -285,6 +285,9 @@ class BaseEntity(BaseModel):
 class Player(BaseEntity):
     """Player entity with D&D 5e statistics"""
     type: EntityType = EntityType.PLAYER
+    # Who plays this character. NPCs have no one; a character with no
+    # account cannot be acted through once authentication is required.
+    account_id: Optional[UUID] = None
     current_location_id: Optional[UUID] = None
     
     # D&D 5e character stats

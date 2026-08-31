@@ -17,10 +17,13 @@ class GameCommand:
     world_id: UUID
     # The table this was said at. Every change it causes is tagged with it.
     session_id: UUID
-    # Who is acting. Once accounts exist this comes from the caller's
-    # identity rather than from whatever the client claims.
+    # Which character is acting.
     player_id: UUID
     # What they actually said, in their own words.
     text: str
+    # The account behind that character, taken from the caller's token.
+    # None means unauthenticated, which dispatch refuses for a character
+    # that has an owner.
+    account_id: Optional[UUID] = None
     # Set by a client that is continuing a conversation it started.
     dialogue_context: Optional[Dict[str, Any]] = None

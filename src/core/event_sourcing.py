@@ -21,19 +21,16 @@ from sqlalchemy import DateTime, Float, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.future import select
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
 
 from config.settings import settings
+from core.db import Base
 from domain.entities import (
     ActionType, ActorType, BaseEntity, ChangeLogEntry, EntityType,
     WorldSnapshot
 )
 
 logger = logging.getLogger(__name__)
-
-class Base(DeclarativeBase):
-    """Declarative base for the event store tables."""
-
 
 class EventLogModel(Base):
     """SQLAlchemy model for event log table"""
@@ -150,6 +147,11 @@ class EventStore:
                 expire_on_commit=False,
             )
             
+            # Importing the account models registers them on the shared
+            # metadata, so create_all below builds those tables too. Done
+            # here rather than at module level to keep the import acyclic.
+            from core import accounts  # noqa: F401
+
             # Create tables
             async with self.engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
