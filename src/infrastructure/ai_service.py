@@ -22,6 +22,21 @@ from infrastructure.command_classification_service import command_classifier
 logger = logging.getLogger(__name__)
 
 
+# Capitalised mid-sentence without being names: pronouns of address, the
+# narrator's stage directions, and the days and titles that fantasy prose
+# reaches for. Kept small on purpose — the overlap test below does most of
+# the work, and this list only mops up what grammar capitalises anyway.
+_COMMON_CAPITALISED_WORDS = frozenset({
+    "i", "i'm", "i'll", "i've", "the", "a", "an", "and", "but", "or", "so",
+    "you", "your", "yours", "he", "she", "they", "we", "it", "this", "that",
+    "these", "those", "there", "here", "now", "then", "well", "yes", "no",
+    "sir", "madam", "master", "mistress", "friend", "traveler", "traveller",
+    "stranger", "aye", "nay", "good", "welcome", "what", "who", "where",
+    "when", "why", "how", "if", "as", "at", "by", "for", "from", "in", "of",
+    "on", "to", "with",
+})
+
+
 class AIResponse(BaseModel):
     """Structured AI response with metadata"""
     content: str
@@ -94,14 +109,18 @@ EXCELLENCE PRINCIPLES:
 - Adapt descriptions to character knowledge (wizards notice magic, rogues spot traps)
 - Build appropriate mood and tension for each situation
 
-DESCRIPTION MASTERY:
-1. IMMEDIATE IMPACT: What hits their senses first?
-2. VISUAL RICHNESS: Colors, textures, lighting, movement
-3. ATMOSPHERIC DEPTH: Sounds, smells, temperature, mood
-4. CHARACTER INSIGHTS: What would their class/background notice?
-5. INTERACTIVE POSSIBILITIES: What can they examine or interact with?
+Work these in as flowing prose: what hits their senses first, then colour and
+light and movement, the sounds and smells and temperature of the place, what
+their particular class or background would pick out, and what they could reach
+for or examine next.
 
-Transform every moment into an memorable scene worthy of an epic fantasy novel.""",
+OUTPUT FORMAT — this matters:
+- Write plain narrative prose addressed to the player.
+- Two or three short paragraphs, no more.
+- Never use headings, numbered lists, bullet points or markdown of any kind.
+- Never name or restate these instructions in your answer.
+
+Transform every moment into a memorable scene worthy of an epic fantasy novel.""",
                 user_template="""COMPREHENSIVE WORLD CONTEXT:
 {context}
 
@@ -131,7 +150,13 @@ CRITICAL RULES:
 - For CRITICAL FAILURE (Natural 1): Make it dramatically bad but not character-breaking
 - Stay consistent with established world facts and character abilities
 - Only reference entities and facts from the provided context
-- Make the narration cinematic but grounded in the world""",
+- Make the narration cinematic but grounded in the world
+
+OUTPUT FORMAT — this matters:
+- Write plain narrative prose addressed to the player, one or two short paragraphs.
+- Never quote the dice numbers, the DC or the mechanics back to the player;
+  show the outcome through what happens in the scene.
+- Never use headings, lists or markdown of any kind.""",
                 user_template="""DICE ROLL RESULTS:
 {dice_results}
 
@@ -267,6 +292,27 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             logger.error(f"Failed to initialize AI Service: {e}")
             raise
     
+    async def _create_completion(self, **kwargs: Any) -> Any:
+        """Single entry point for chat completions.
+
+        Provider-specific request parameters are applied here so the call
+        sites stay provider-agnostic.
+        """
+        extras = settings.llm_extra_params
+        try:
+            return await self.client.chat.completions.create(**{**extras, **kwargs})
+        except openai.BadRequestError:
+            # Provider extras are not universally accepted — Gemini takes
+            # reasoning_effort on some models and rejects it on others.
+            # Retry plainly so swapping models needs no config change.
+            if not extras:
+                raise
+            logger.warning(
+                f"Model {kwargs.get('model')} rejected provider parameters "
+                f"{list(extras)}; retrying without them"
+            )
+            return await self.client.chat.completions.create(**kwargs)
+
     async def _test_connection(self) -> None:
         """Test the configured LLM provider's connection"""
         try:
@@ -292,27 +338,6 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         breakdown: Dict[str, float] = {}
         total = 0.0
         
-    async def _create_completion(self, **kwargs: Any) -> Any:
-        """Single entry point for chat completions.
-
-        Provider-specific request parameters are applied here so the call
-        sites stay provider-agnostic.
-        """
-        extras = settings.llm_extra_params
-        try:
-            return await self.client.chat.completions.create(**{**extras, **kwargs})
-        except openai.BadRequestError:
-            # Provider extras are not universally accepted — Gemini takes
-            # reasoning_effort on some models and rejects it on others.
-            # Retry plainly so swapping models needs no config change.
-            if not extras:
-                raise
-            logger.warning(
-                f"Model {kwargs.get('model')} rejected provider parameters "
-                f"{list(extras)}; retrying without them"
-            )
-            return await self.client.chat.completions.create(**kwargs)
-
         for msg in messages:
             role = msg.get("role", "unknown")
             content = msg.get("content", "")
@@ -519,28 +544,66 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
             f"Mood: {state.current_mood}",
             f"Activity: {state.current_activity}",
         ])
-        
+
+        # The context may carry past events, including a death this NPC has
+        # since been raised from. Current state is the authority; say so
+        # plainly or the model reasons from stale history and refuses to
+        # speak for a character who is standing right there.
+        if npc.is_alive:
+            profile_parts.append(
+                "Status: ALIVE and present. Any past death of this character "
+                "has been undone — speak as them normally."
+            )
+        else:
+            profile_parts.append("Status: DEAD. This character cannot speak or act.")
+
         return "\n".join(profile_parts)
     
     def validate_response_entities(self, response: str, context_entities: List[BaseEntity]) -> Tuple[bool, List[str]]:
-        """Validate that response only references entities from context"""
+        """Flag proper nouns in the response that no context entity accounts for.
+
+        A consistency heuristic, not a guarantee. Two things keep it from
+        crying wolf on correct prose: capitalisation that merely starts a
+        sentence is ignored, and a name counts as known when it overlaps an
+        entity name either way round — an entity called "The Prancing Pony"
+        vindicates a mention of "Prancing Pony".
+        """
         warnings = []
         hallucination_detected = False
-        
-        # Extract potential entity names from response (simple regex)
-        potential_names = re.findall(r'\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*\b', response)
-        
-        # Get valid entity names from context
-        valid_names = {entity.name for entity in context_entities}
-        
-        # Check for references to entities not in context
-        for name in potential_names:
-            if len(name) > 2 and name not in valid_names:
-                # Simple heuristic: if it looks like a proper noun and isn't in context
-                if not any(common in name.lower() for common in ['the', 'and', 'you', 'your', 'this', 'that']):
-                    warnings.append(f"Potential hallucination: '{name}' not found in context")
-                    hallucination_detected = True
-        
+
+        # Words that open a sentence are capitalised by grammar, not by
+        # being names, so only look at capitalised words mid-sentence.
+        candidates: set[str] = set()
+        for sentence in re.split(r'(?<=[.!?:;\n])\s+', response):
+            stripped = sentence.lstrip(' *_"\'—-')
+            for match in re.finditer(
+                r'\b[A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+)*\b', stripped
+            ):
+                # Skip a match that sits at the very start of the sentence.
+                if match.start() == 0:
+                    continue
+                candidates.add(match.group())
+
+        entity_names = [entity.name for entity in context_entities if entity.name]
+        lowered_names = [name.lower() for name in entity_names]
+
+        for name in sorted(candidates):
+            if len(name) <= 2:
+                continue
+
+            lowered = name.lower()
+            if any(
+                lowered in entity_name or entity_name in lowered
+                for entity_name in lowered_names
+            ):
+                continue
+
+            if lowered in _COMMON_CAPITALISED_WORDS:
+                continue
+
+            warnings.append(f"Potential hallucination: '{name}' not found in context")
+            hallucination_detected = True
+
         return hallucination_detected, warnings
     
     @track_ai_operation("npc_dialogue", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
