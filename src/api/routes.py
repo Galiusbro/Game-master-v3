@@ -9,6 +9,10 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from api.auth_routes import router as auth_router
+from api.auth import CurrentAccount
+from api.table_routes import router as table_router
+from core.accounts import Account
+from core.tables import OWNER, table_service
 from api.ai_routes import router as ai_router
 from api.game_routes import router as game_router
 from api.streaming_routes import router as streaming_router
@@ -28,6 +32,7 @@ router = APIRouter()
 
 # Include AI routes  
 router.include_router(auth_router)
+router.include_router(table_router)
 router.include_router(ai_router)
 
 # Include Natural Language Game routes
@@ -521,10 +526,19 @@ async def get_recent_changes(
 
 # World generation endpoint (MVP)
 @router.post("/world/generate")
-async def generate_world_endpoint(req: WorldGenRequest) -> Dict[str, Any]:
-    """Generate a minimal macro world and return summary."""
+async def generate_world_endpoint(
+    req: WorldGenRequest, account: Account = CurrentAccount
+) -> Dict[str, Any]:
+    """Generate a minimal macro world and return summary.
+
+    Whoever generates a world owns it — otherwise it would exist with no
+    one able to open a table in it.
+    """
     try:
         summary = await generate_world({k: v for k, v in req.dict().items() if v is not None})
+        world_id = summary.get("world_id")
+        if world_id:
+            await table_service.grant_world(UUID(str(world_id)), account.id, role=OWNER)
         return {"success": True, "summary": summary}
     except Exception as e:
         logger.error(f"World generation failed: {e}")

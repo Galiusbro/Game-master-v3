@@ -19,6 +19,7 @@ from api.auth import CurrentAccount
 from core.accounts import Account
 from core.narration import EntityNotFound
 from core.permissions import NotYours
+from core.tables import table_service
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,12 @@ router = APIRouter(prefix="/game", tags=["Natural Language Game Commands"])
 
 
 class GameCommandRequest(BaseModel):
-    """Natural language game command request"""
-    world_id: UUID
+    """Natural language game command request.
+
+    The world is not named here on purpose: it follows from the table.
+    A client that only knows "this chat" can still play, and one that
+    knows more cannot declare a world it is not sitting in.
+    """
     session_id: UUID
     player_id: UUID
     command: str
@@ -78,10 +83,18 @@ async def process_natural_command(
     This endpoint is an adapter: it turns an HTTP request into a
     GameCommand, lets the core play it out, and renders the result.
     """
+    table = await table_service.get_session(request.session_id)
+    if not table:
+        raise HTTPException(status_code=404, detail="No such table")
+
+    seat = await table_service.seat_at(request.session_id, account.id)
+    if not seat:
+        raise HTTPException(status_code=403, detail="You are not at this table")
+
     try:
         result = await execute_command(
             GameCommand(
-                world_id=request.world_id,
+                world_id=table["world_id"],
                 session_id=request.session_id,
                 player_id=request.player_id,
                 text=request.command,
@@ -174,6 +187,8 @@ async def create_character(
 ) -> GameCommandResponse:
     """Create a new D&D character"""
     try:
+        await table_service.require_world_access(request.world_id, account.id)
+
         from domain.entities import PlayerStats
         
         # Validate ability scores
@@ -245,6 +260,8 @@ async def create_character(
     except HTTPException:
         # Re-raise HTTP exceptions as-is (400, 404, etc.)
         raise
+    except NotYours as e:
+        raise HTTPException(status_code=403, detail=str(e))
     except Exception as e:
         logger.error(f"Error creating character: {e}")
         raise HTTPException(status_code=500, detail=f"Character creation failed: {str(e)}")

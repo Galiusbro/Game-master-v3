@@ -147,10 +147,10 @@ class EventStore:
                 expire_on_commit=False,
             )
             
-            # Importing the account models registers them on the shared
+            # Importing the account and table models registers them on the shared
             # metadata, so create_all below builds those tables too. Done
             # here rather than at module level to keep the import acyclic.
-            from core import accounts  # noqa: F401
+            from core import accounts, tables  # noqa: F401
 
             # Create tables
             async with self.engine.begin() as conn:
