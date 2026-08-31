@@ -15,8 +15,9 @@ from infrastructure.ai_service import ai_service
 
 if TYPE_CHECKING:
     # Imported for type annotations only (runtime import would be circular).
-    from api.game_routes import GameCommandRequest
     from core.semantic_parser import ParsedCommand
+
+from core.actions.command import GameCommand
 
 logger = logging.getLogger(__name__)
 
@@ -33,25 +34,25 @@ async def _items_in_room(location_id: Any) -> List[BaseEntity]:
 
 
 async def handle_search(
-    request: "GameCommandRequest", parsed: "ParsedCommand"
+    command: GameCommand, parsed: "ParsedCommand"
 ) -> dict[str, Any]:
     """Handle search/investigation actions"""
 
     target = (parsed.intent_details or {}).get("target", "something")
     warnings: List[str] = []
 
-    player = await world_service.get_player(request.player_id)
+    player = await world_service.get_player(command.player_id)
     if not player:
         return {
             "success": False,
             "action_type": "search",
             "content": "You cannot search — your character is missing from the world.",
-            "original_command": request.command,
+            "original_command": command.text,
             "warnings": ["Player not found"],
         }
 
     # The dice decide before anything is described.
-    dc = dice_engine.determine_difficulty_class(request.command)
+    dc = dice_engine.determine_difficulty_class(command.text)
     roll = dice_engine.make_skill_check(
         character=player,
         skill=SkillType.INVESTIGATION,
@@ -76,8 +77,8 @@ async def handle_search(
     # undone by a rollback like any other change.
     await world_service.update_entity(
         entity=player,
-        actor_id=request.player_id,
-        session_id=request.session_id,
+        actor_id=command.player_id,
+        session_id=command.session_id,
     )
 
     if discovered:
@@ -95,7 +96,7 @@ async def handle_search(
 
     dice_context = "\n".join([
         "SEARCH RESULT:",
-        f"- Action: {request.command}",
+        f"- Action: {command.text}",
         f"- Investigation check: {roll.dice_notation} = {roll.total} vs DC {dc}",
         f"- Result: {'SUCCESS' if roll.is_success else 'FAILURE'}",
         outcome,
@@ -107,7 +108,7 @@ async def handle_search(
         if ai_service.is_initialized:
             ai_response = await ai_service.generate_dice_outcome_narration(
                 dice_results=dice_context,
-                action_description=request.command,
+                action_description=command.text,
                 player=player,
                 context_entities=(parsed.context_entities or []) + discovered,
             )
@@ -152,6 +153,6 @@ async def handle_search(
             "raw_results": roll.raw_results,
         }],
         "parsing_confidence": parsed.confidence,
-        "original_command": request.command,
+        "original_command": command.text,
         "warnings": warnings,
     }

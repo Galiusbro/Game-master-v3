@@ -5,31 +5,30 @@ Handles skill check actions with dice rolling
 """
 
 import logging
-from typing import Any, List, Optional, TYPE_CHECKING
-from uuid import UUID
+from typing import Any, TYPE_CHECKING
 
 from fastapi import HTTPException
 
 from core.dice_engine import dice_engine
 from core.world_service import world_service
-from domain.entities import EntityType
 from infrastructure.ai_service import ai_service
 
 if TYPE_CHECKING:
     # Imported for type annotations only (runtime import would be circular).
-    from api.game_routes import GameCommandRequest
     from core.semantic_parser import ParsedCommand
+
+from core.actions.command import GameCommand
 
 logger = logging.getLogger(__name__)
 
 
 async def handle_skill_check(
-    request: "GameCommandRequest", parsed: "ParsedCommand"
+    command: GameCommand, parsed: "ParsedCommand"
 ) -> dict[str, Any]:
     """Handle skill check actions with dice rolling"""
     try:
         # Get player entity
-        player = await world_service.get_player(request.player_id)
+        player = await world_service.get_player(command.player_id)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         
@@ -48,7 +47,7 @@ async def handle_skill_check(
         # Resolve the complex action with dice rolls
         sequence = dice_engine.resolve_complex_action(
             actor=player,
-            action_description=request.command,
+            action_description=command.text,
             target_id=parsed.target_npc_id or parsed.target_item_id,
             context=context
         )
@@ -56,8 +55,8 @@ async def handle_skill_check(
         # Update player in the world service
         await world_service.update_entity(
             entity=player,
-            actor_id=request.player_id,
-            session_id=request.session_id
+            actor_id=command.player_id,
+            session_id=command.session_id
         )
         
         # Generate AI response based on the dice results
@@ -87,7 +86,7 @@ DICE ROLL RESULT:
                 if ai_service.is_initialized:
                     ai_response = await ai_service.generate_dice_outcome_narration(
                         dice_results=dice_context,
-                        action_description=request.command,
+                        action_description=command.text,
                         player=player,
                         context_entities=parsed.context_entities or []
                     )
@@ -108,7 +107,7 @@ DICE ROLL RESULT:
                 response_content = f"🎲 {sequence.primary_roll.description}: {sequence.primary_roll.total} vs DC {sequence.primary_roll.difficulty_class} = {result_word}"
             
         else:
-            response_content = f"You attempt: {request.command}. The outcome is unclear."
+            response_content = f"You attempt: {command.text}. The outcome is unclear."
         
         # Prepare dice rolls data for response
         dice_rolls_data = []
@@ -140,7 +139,7 @@ DICE ROLL RESULT:
             },
             "dice_rolls": dice_rolls_data,
             "parsing_confidence": parsed.confidence,
-            "original_command": request.command,
+            "original_command": command.text,
             "event_id": sequence.sequence_id
         }
         
@@ -149,7 +148,7 @@ DICE ROLL RESULT:
         return {
             "success": False,
             "action_type": "skill_check",
-            "content": f"You attempt: {request.command}, but something goes wrong.",
-            "original_command": request.command,
+            "content": f"You attempt: {command.text}, but something goes wrong.",
+            "original_command": command.text,
             "warnings": [f"Skill check failed: {str(e)}"]
         }

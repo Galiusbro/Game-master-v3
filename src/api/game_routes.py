@@ -7,20 +7,15 @@ and routes them to appropriate AI endpoints.
 
 import logging
 from typing import Any, Dict, List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from core.semantic_parser import semantic_parser
-from core.social_checks import BEFRIEND_INTENT_THRESHOLD
-from infrastructure.command_classification_service import GameAction, command_classifier
 from core.world_service import world_service
-from core.dice_engine import dice_engine
-from api.ai_routes import NPCDialogueRequest, WorldDescriptionRequest
-from infrastructure.ai_service import ai_service
-from domain.entities import EntityType, Player, AbilityScore, SkillType, CharacterClass
-from api.handlers import handle_combat, handle_skill_check, handle_resurrection, handle_magic, handle_unknown, handle_dialogue, handle_trade, handle_movement, handle_search, handle_exploration
+from domain.entities import Player, AbilityScore, SkillType, CharacterClass
+from core.actions import GameCommand, execute_command
+from core.narration import EntityNotFound
 
 logger = logging.getLogger(__name__)
 
@@ -64,163 +59,38 @@ class GameCommandResponse(BaseModel):
 
 
 @router.post("/command", response_model=GameCommandResponse)
-async def process_natural_command(
-    request: GameCommandRequest,
-    background_tasks: BackgroundTasks
-) -> GameCommandResponse:
+async def process_natural_command(request: GameCommandRequest) -> GameCommandResponse:
     """
     Process natural language game command
-    
+
     Examples:
     - "иду в таверну"
     - "говорю с барменом: привет, есть ли комнаты?"
     - "ищу зелья в магазине"
     - "покупаю меч у кузнеца"
-    """
-    
-    logger.info(f"Processing command: '{request.command}' for player {request.player_id}")
-    
-    try:
-        # 0. CHECK IF PLAYER IS DEAD BEFORE PROCESSING ANY COMMAND
-        player = await world_service.get_player(request.player_id)
-        if player and player.effective_hit_points <= 0:
-            logger.info(f"💀 Player {player.name} is dead (HP: {player.effective_hit_points}). Checking for resurrection attempt.")
-            
-            # Check if player is trying to use a resurrection scroll
-            resurrection_event, resurrection_conf = command_classifier.detect_special_event(request.command)
-            
-            if resurrection_event == "resurrection_event" and resurrection_conf > 0.6:
-                logger.info(f"📜 Resurrection attempt detected! Confidence: {resurrection_conf:.2f}")
-                resurrection_result = await handle_resurrection(request, player)
-                return GameCommandResponse(**resurrection_result)
-            
-            logger.info(f"💀 No resurrection attempt. Generating death message.")
-            
-            # Generate AI response about death and resurrection scroll
-            try:
-                if ai_service.is_initialized:
-                    death_response = await ai_service.generate_death_response(
-                        player_name=player.name,
-                        player_class=player.stats.character_class.value if player.stats.character_class else "adventurer",
-                        command=request.command
-                    )
-                    content = death_response.content
-                    confidence = death_response.confidence
-                    tokens_used = death_response.tokens_used
-                    response_time = death_response.response_time
-                    event_id = None  # AIResponse carries no event id; death events are logged by world_service
-                else:
-                    # Fallback death message
-                    content = f"💀 {player.name}, you have fallen in battle. Your spirit lingers in the realm between life and death. To continue your adventure, you must acquire a Scroll of Resurrection from a powerful cleric or merchant. Your last attempt was: '{request.command}'"
-                    confidence = 1.0
-                    tokens_used = 0
-                    response_time = 0.0
-                    event_id = None
-                    
-            except Exception as e:
-                logger.warning(f"AI death response failed: {e}")
-                content = f"💀 {player.name}, you are dead. Your HP is {player.effective_hit_points}. To continue, find a Scroll of Resurrection. Your command was: '{request.command}'"
-                confidence = 1.0
-                tokens_used = 0
-                response_time = 0.0
-                event_id = None
-            
-            return GameCommandResponse(
-                success=False,
-                action_type="death",
-                content=content,
-                confidence=confidence,
-                tokens_used=tokens_used,
-                response_time=response_time,
-                resolved_entities={
-                    "player_dead": True,
-                    "player_hp": player.effective_hit_points,
-                    "player_max_hp": player.effective_max_hit_points,
-                    "resurrection_required": True
-                },
-                parsing_confidence=1.0,
-                original_command=request.command,
-                warnings=["Player is dead - resurrection required"],
-                event_id=event_id
-            )
-        
-        # 1. Parse the natural language command
-        parsed = await semantic_parser.parse_command(
-            world_id=request.world_id,
-            session_id=request.session_id,
-            player_id=request.player_id,
-            raw_command=request.command,
-            dialogue_context=request.dialogue_context
-        )
-        
-        logger.info(f"Parsed action: {parsed.action}, confidence: {parsed.confidence}")
 
-        # 1.5 Social intent override: route befriending attempts via dialogue handler
-        try:
-            social_intent, social_conf = command_classifier.classify_social_intent(request.command)
-        except Exception:
-            social_intent, social_conf = None, 0.0
-        if social_intent == "befriend" and social_conf >= BEFRIEND_INTENT_THRESHOLD:
-            dialogue_result = await handle_dialogue(request, parsed)
-            return GameCommandResponse(**dialogue_result)
-        
-        # 2. Route to appropriate handler based on detected action
-        # All conversational/social actions go through dialogue handler
-        if parsed.action in [GameAction.DIALOGUE, GameAction.PERSUASION, GameAction.DECEPTION]:
-            dialogue_result = await handle_dialogue(request, parsed)
-            return GameCommandResponse(**dialogue_result)
-            
-        elif parsed.action == GameAction.MOVEMENT:
-            movement_result = await handle_movement(request, parsed)
-            return GameCommandResponse(**movement_result)
-            
-        elif parsed.action == GameAction.SEARCH:
-            search_result = await handle_search(request, parsed)
-            return GameCommandResponse(**search_result)
-            
-        elif parsed.action == GameAction.EXPLORE:
-            exploration_result = await handle_exploration(request, parsed)
-            return GameCommandResponse(**exploration_result)
-            
-        elif parsed.action == GameAction.TRADE:
-            trade_result = await handle_trade(request, parsed)
-            # If trade handler indicates it needs exploration handler, delegate to handle_exploration
-            if trade_result.get("needs_exploration_handler"):
-                exploration_result = await handle_exploration(request, parsed)
-                return GameCommandResponse(**exploration_result)
-            return GameCommandResponse(**trade_result)
-            
-        elif parsed.action == GameAction.COMBAT:
-            combat_result = await handle_combat(request, parsed)
-            return GameCommandResponse(**combat_result)
-            
-        elif parsed.action == GameAction.MAGIC:
-            magic_result = await handle_magic(request, parsed)
-            # If magic handler indicates it needs AI interpretation, delegate to handle_unknown
-            if magic_result.get("needs_ai_interpretation"):
-                unknown_result = await handle_unknown(request, parsed)
-                return GameCommandResponse(**unknown_result)
-            return GameCommandResponse(**magic_result)
-            
-        # Skill check actions
-        elif parsed.action in [GameAction.STEALTH, GameAction.INVESTIGATION, 
-                              GameAction.SLEIGHT_OF_HAND, GameAction.ATHLETICS, 
-                              GameAction.PERCEPTION, GameAction.SKILL_CHECK]:
-            skill_result = await handle_skill_check(request, parsed)
-            return GameCommandResponse(**skill_result)
-            
-        else:
-            # Unknown action - let AI try to interpret
-            unknown_result = await handle_unknown(request, parsed)
-            return GameCommandResponse(**unknown_result)
-    
+    This endpoint is an adapter: it turns an HTTP request into a
+    GameCommand, lets the core play it out, and renders the result.
+    """
+    try:
+        result = await execute_command(
+            GameCommand(
+                world_id=request.world_id,
+                session_id=request.session_id,
+                player_id=request.player_id,
+                text=request.command,
+                dialogue_context=request.dialogue_context,
+            )
+        )
+        return GameCommandResponse(**result)
+
     except HTTPException:
-        # Re-raise HTTP exceptions as-is (404, 422, etc.)
         raise
+    except EntityNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Error processing command '{request.command}': {e}")
         raise HTTPException(status_code=500, detail=f"Command processing failed: {str(e)}")
-
 
 
 @router.get("/help")

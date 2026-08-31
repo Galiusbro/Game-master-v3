@@ -8,16 +8,16 @@ import logging
 from typing import Any, Optional, TYPE_CHECKING
 from uuid import UUID
 
-from fastapi import BackgroundTasks
 
-from api.ai_routes import WorldDescriptionRequest, describe_world
+from core import narration
 from core.world_service import world_service
 from domain.entities import BaseEntity, EntityType, Location, Player
 
 if TYPE_CHECKING:
     # Imported for type annotations only (runtime import would be circular).
-    from api.game_routes import GameCommandRequest
     from core.semantic_parser import ParsedCommand
+
+from core.actions.command import GameCommand
 
 logger = logging.getLogger(__name__)
 
@@ -51,31 +51,31 @@ async def _resolve_destination(
 
 
 async def handle_movement(
-    request: "GameCommandRequest", parsed: "ParsedCommand"
+    command: GameCommand, parsed: "ParsedCommand"
 ) -> dict[str, Any]:
     """Handle movement to location"""
 
     warnings: list[str] = []
 
-    player = await world_service.get_player(request.player_id)
+    player = await world_service.get_player(command.player_id)
     if not isinstance(player, Player):
         return {
             "success": False,
             "action_type": "movement",
             "content": "You cannot move — your character is missing from the world.",
-            "original_command": request.command,
+            "original_command": command.text,
             "warnings": ["Player not found"],
         }
 
     origin_id: Optional[UUID] = getattr(player, "current_location_id", None)
-    destination = await _resolve_destination(parsed, request.command)
+    destination = await _resolve_destination(parsed, command.text)
 
     if not destination:
         return {
             "success": False,
             "action_type": "movement",
             "content": "You look around, but nothing here matches where you meant to go.",
-            "original_command": request.command,
+            "original_command": command.text,
             "resolved_entities": {"from_location": str(origin_id) if origin_id else None},
             "parsing_confidence": parsed.confidence,
             "warnings": ["No destination resolved from command"],
@@ -104,24 +104,20 @@ async def handle_movement(
         player.current_location_id = destination.id
         await world_service.update_entity(
             entity=player,
-            actor_id=request.player_id,
-            session_id=request.session_id,
+            actor_id=command.player_id,
+            session_id=command.session_id,
         )
         logger.info(
             f"🚶 {player.name} moved {origin.name if origin else 'nowhere'} -> {destination.name}"
         )
 
     # Describe what the player arrives to, not the journey.
-    world_req = WorldDescriptionRequest(
-        player_id=request.player_id,
-        request=f"I have just arrived at {destination.name}. {request.command}",
-        session_id=request.session_id,
+    ai_response = await narration.describe_world(
+        player_id=command.player_id,
+        request=f"I have just arrived at {destination.name}. {command.text}",
+        session_id=command.session_id,
         arriving=True,
     )
-
-    bg_tasks = BackgroundTasks()
-    ai_response = await describe_world(world_req, bg_tasks)
-    await bg_tasks()
 
     return {
         "success": True,
@@ -137,7 +133,7 @@ async def handle_movement(
             "moved": destination.id != origin_id,
         },
         "parsing_confidence": parsed.confidence,
-        "original_command": request.command,
+        "original_command": command.text,
         "warnings": warnings + list(ai_response.warnings or []),
         "event_id": ai_response.event_id,
     }

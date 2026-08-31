@@ -7,13 +7,11 @@ Handles dialogue with NPCs
 import logging
 from typing import Any, TYPE_CHECKING
 
-from fastapi import BackgroundTasks
 
-from api.ai_routes import NPCDialogueRequest, npc_dialogue
+from core import narration
 from infrastructure.command_classification_service import command_classifier
 from core.world_service import world_service
-from domain.entities import EntityType, SkillType
-from core.dice_engine import dice_engine
+from domain.entities import EntityType
 from core.social_checks import (
     BEFRIEND_INTENT_THRESHOLD,
     is_on_social_cooldown,
@@ -22,14 +20,15 @@ from core.social_engine.engine import social_engine
 
 if TYPE_CHECKING:
     # Imported for type annotations only (runtime import would be circular).
-    from api.game_routes import GameCommandRequest
     from core.semantic_parser import ParsedCommand
+
+from core.actions.command import GameCommand
 
 logger = logging.getLogger(__name__)
 
 
 async def handle_dialogue(
-    request: "GameCommandRequest", parsed: "ParsedCommand"
+    command: GameCommand, parsed: "ParsedCommand"
 ) -> dict[str, Any]:
     """Handle dialogue with NPC"""
     
@@ -41,14 +40,14 @@ async def handle_dialogue(
             # Prefer NPCs in player's current location when resolving by description
             location_filter = None
             try:
-                player = await world_service.get_player(request.player_id)
+                player = await world_service.get_player(command.player_id)
                 if player and getattr(player, 'current_location_id', None):
                     location_filter = {"current_location_id": str(player.current_location_id)}
             except Exception:
                 location_filter = None
 
             search_results = await world_service.search_entities(
-                query=request.command,
+                query=command.text,
                 limit=1,
                 entity_types=[EntityType.NPC],
                 include_graph_context=False,
@@ -65,7 +64,7 @@ async def handle_dialogue(
                 "success": False,
                 "action_type": "dialogue",
                 "content": "I don't see anyone to talk to here. Could you be more specific about who you want to speak with?",
-                "original_command": request.command,
+                "original_command": command.text,
                 "warnings": ["No NPC resolved from command"]
             }
     
@@ -82,7 +81,7 @@ async def handle_dialogue(
                     "success": True,
                     "action_type": "dialogue",
                     "content": f"You approach {npc.name}, but there is no response. The lifeless body lies motionless before you - death has claimed them. No amount of words can reach them now.",
-                    "original_command": request.command,
+                    "original_command": command.text,
                     "warnings": [f"Cannot dialogue with deceased NPC: {npc.name}"],
                     "resolved_entities": {"target_npc": npc.name}
                 }
@@ -94,7 +93,7 @@ async def handle_dialogue(
                 "success": False,
                 "action_type": "dialogue", 
                 "content": "I don't see that person here anymore.",
-                "original_command": request.command,
+                "original_command": command.text,
                 "warnings": ["NPC not found in database"]
             }
             
@@ -106,9 +105,9 @@ async def handle_dialogue(
     
     # Detect social intent (e.g., befriend) and run social check if needed
     try:
-        intent, intent_conf = command_classifier.classify_social_intent(request.command)
-        logger.info(f"Social intent detected: intent={intent}, confidence={intent_conf:.3f} for command='{request.command}'")
-        player = await world_service.get_player(request.player_id)
+        intent, intent_conf = command_classifier.classify_social_intent(command.text)
+        logger.info(f"Social intent detected: intent={intent}, confidence={intent_conf:.3f} for command='{command.text}'")
+        player = await world_service.get_player(command.player_id)
         if intent == "befriend" and intent_conf >= BEFRIEND_INTENT_THRESHOLD and npc and player:
 
             # Hard blockers: same location and NPC is alive checked above
@@ -118,14 +117,14 @@ async def handle_dialogue(
                         "success": False,
                         "action_type": "dialogue",
                         "content": "There is no one like that here. You would have to find them first.",
-                        "original_command": request.command,
+                        "original_command": command.text,
                         "warnings": ["Different location: cannot befriend out of proximity"],
                     }
 
             # A cooldown bars another attempt at winning them over — it does
             # not make the NPC mute. Skip the check and let the conversation
             # happen as ordinary dialogue.
-            on_cooldown = is_on_social_cooldown(npc, request.player_id)
+            on_cooldown = is_on_social_cooldown(npc, command.player_id)
             if on_cooldown:
                 logger.info(
                     f"Social cooldown active for {npc.name}; continuing as plain dialogue"
@@ -136,22 +135,22 @@ async def handle_dialogue(
                 intent="befriend",
                 player=player,
                 npc=npc,
-                message=request.command,
+                message=command.text,
             )
 
             if mechanics_info:
                 # Sync relationship label based on thresholds using returned disposition
                 new_score = mechanics_info.get("new_disposition", 0)
                 if new_score >= 50:
-                    npc.current_state.relationship_to_player[request.player_id] = "friendly"
+                    npc.current_state.relationship_to_player[command.player_id] = "friendly"
                 elif new_score <= -50:
-                    npc.current_state.relationship_to_player[request.player_id] = "hostile"
+                    npc.current_state.relationship_to_player[command.player_id] = "hostile"
 
                 # Persist via world service
                 await world_service.update_entity(
                     entity=npc,
-                    actor_id=request.player_id,
-                    session_id=request.session_id,
+                    actor_id=command.player_id,
+                    session_id=command.session_id,
                 )
 
                 # Log summary
@@ -166,34 +165,24 @@ async def handle_dialogue(
 
                 # Prepare mechanics info for response
                 try:
-                    relationship_label = npc.current_state.compute_relationship_for_player(request.player_id)
+                    relationship_label = npc.current_state.compute_relationship_for_player(command.player_id)
                 except Exception:
-                    relationship_label = npc.current_state.relationship_to_player.get(request.player_id, "neutral")
+                    relationship_label = npc.current_state.relationship_to_player.get(command.player_id, "neutral")
 
                 mechanics_info["relationship"] = relationship_label
     except Exception as e:
         logger.warning(f"Failed to process social intent: {e}")
 
     # Create dialogue request
-    dialogue_req = NPCDialogueRequest(
-        player_id=request.player_id,
+    ai_response = await narration.npc_dialogue(
+        player_id=command.player_id,
         npc_id=parsed.target_npc_id,
         # The parser only fills `message` when the player quoted their words
         # or used a colon. Otherwise the command itself is what they said —
         # the old "Hello" default meant the NPC never heard the question.
-        player_message=parsed.message or request.command,
-        situation_context="",
-        session_id=request.session_id
+        player_message=parsed.message or command.text,
+        session_id=command.session_id,
     )
-    
-    # Call AI dialogue endpoint with BackgroundTasks
-    bg_tasks = BackgroundTasks()
-    ai_response = await npc_dialogue(dialogue_req, bg_tasks)
-
-    # We are outside the FastAPI response cycle here, so the framework will
-    # never run these tasks for us — execute them explicitly (AI interaction
-    # logging used to be silently dropped at this point).
-    await bg_tasks()
     
     return {
         "success": True,
@@ -207,7 +196,7 @@ async def handle_dialogue(
             "npc_found": True
         },
         "parsing_confidence": parsed.confidence,
-        "original_command": request.command,
+        "original_command": command.text,
         "warnings": ai_response.warnings,
         "dice_rolls": ([mechanics_info] if mechanics_info else []),
         "event_id": ai_response.event_id

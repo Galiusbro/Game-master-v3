@@ -14,13 +14,14 @@ from fastapi import HTTPException
 
 from core.dice_engine import dice_engine
 from core.world_service import world_service
-from domain.entities import NPC, AbilityScore, EntityType, Player
+from domain.entities import NPC, AbilityScore, Player
 from infrastructure.ai_service import ai_service
 
 if TYPE_CHECKING:
     # Imported for type annotations only (runtime import would be circular).
-    from api.game_routes import GameCommandRequest
     from core.semantic_parser import ParsedCommand
+
+from core.actions.command import GameCommand
 
 logger = logging.getLogger(__name__)
 
@@ -42,14 +43,14 @@ def _player_damage_notation(player: Player) -> str:
 
 
 async def handle_combat(
-    request: "GameCommandRequest", parsed: "ParsedCommand"
+    command: GameCommand, parsed: "ParsedCommand"
 ) -> dict[str, Any]:
     """Handle combat actions with dice rolling and state mutations"""
     warnings: list[str] = []
     dice_rolls_data: list[dict[str, Any]] = []
 
     try:
-        player = await world_service.get_player(request.player_id)
+        player = await world_service.get_player(command.player_id)
         if not isinstance(player, Player):
             raise HTTPException(status_code=404, detail="Player not found")
 
@@ -71,7 +72,7 @@ async def handle_combat(
                 ),
                 "resolved_entities": {"target_npc": target_npc.name},
                 "parsing_confidence": parsed.confidence,
-                "original_command": request.command,
+                "original_command": command.text,
                 "warnings": ["Target already deceased"],
             }
 
@@ -143,12 +144,12 @@ async def handle_combat(
 
                 await world_service.update_entity(
                     entity=target_npc,
-                    actor_id=request.player_id,
-                    session_id=request.session_id,
+                    actor_id=command.player_id,
+                    session_id=command.session_id,
                 )
 
                 if target_died:
-                    await _record_death_event(request, player, target_npc, warnings)
+                    await _record_death_event(command, player, target_npc, warnings)
 
         # ---------------------------------------------------------------- #
         # The counter-attack. Damage reaches the player from an opponent's
@@ -202,15 +203,15 @@ async def handle_combat(
         # Persist the player once, after both sides have acted.
         await world_service.update_entity(
             entity=player,
-            actor_id=request.player_id,
-            session_id=request.session_id,
+            actor_id=command.player_id,
+            session_id=command.session_id,
         )
 
         # ---------------------------------------------------------------- #
         # Narration — the dice have already decided everything above
         # ---------------------------------------------------------------- #
         outcome_lines = [
-            f"- Action: {request.command}",
+            f"- Action: {command.text}",
             f"- Attack roll: {attack_roll.dice_notation} = {attack_roll.total} vs AC {target_ac}",
             f"- Result: {'HIT' if attack_roll.is_success else 'MISS'}",
         ]
@@ -244,7 +245,7 @@ async def handle_combat(
             if ai_service.is_initialized:
                 ai_response = await ai_service.generate_dice_outcome_narration(
                     dice_results=dice_context,
-                    action_description=request.command,
+                    action_description=command.text,
                     player=player,
                     context_entities=parsed.context_entities or [],
                 )
@@ -292,7 +293,7 @@ async def handle_combat(
             },
             "dice_rolls": dice_rolls_data,
             "parsing_confidence": parsed.confidence,
-            "original_command": request.command,
+            "original_command": command.text,
             "warnings": warnings,
             "event_id": None,
         }
@@ -304,14 +305,14 @@ async def handle_combat(
         return {
             "success": False,
             "action_type": "combat",
-            "content": f"You attempt: {request.command}, but the combat system encounters an error.",
-            "original_command": request.command,
+            "content": f"You attempt: {command.text}, but the combat system encounters an error.",
+            "original_command": command.text,
             "warnings": [f"Combat failed: {str(e)}"],
         }
 
 
 async def _record_death_event(
-    request: "GameCommandRequest", player: Player, npc: NPC, warnings: list[str]
+    command: GameCommand, player: Player, npc: NPC, warnings: list[str]
 ) -> None:
     """Persist the death as an Event so later scenes can remember it."""
     try:
@@ -324,20 +325,20 @@ async def _record_death_event(
                 f"{npc.name} was slain in combat by {player.name}."
             ),
             action_type=ActionType.COMBAT,
-            actor_id=request.player_id,
+            actor_id=command.player_id,
             actor_type=ActorType.PLAYER,
-            participants=[request.player_id, npc.id],
+            participants=[command.player_id, npc.id],
             location_id=npc.current_state.current_location_id,
             before_state={"npc_alive": True},
             after_state={"npc_alive": False, "death_confirmed": True},
-            session_id=request.session_id,
+            session_id=command.session_id,
             confidence_score=1.0,
         )
 
         await world_service.create_entity(
             death_event,
-            actor_id=request.player_id,
-            session_id=request.session_id,
+            actor_id=command.player_id,
+            session_id=command.session_id,
         )
         logger.info(f"📚 Created death event entity: {death_event.id}")
     except Exception as e:

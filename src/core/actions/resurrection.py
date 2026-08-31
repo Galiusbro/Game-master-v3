@@ -5,21 +5,20 @@ Handles resurrection scroll usage
 """
 
 import logging
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Any
 
 from core.world_service import world_service
 from domain.entities import Player
 from infrastructure.ai_service import ai_service
 
-if TYPE_CHECKING:
-    # Imported for type annotations only (runtime import would be circular).
-    from api.game_routes import GameCommandRequest
+
+from core.actions.command import GameCommand
 
 logger = logging.getLogger(__name__)
 
 
 async def handle_resurrection(
-    request: "GameCommandRequest", player: Player
+    command: GameCommand, player: Player
 ) -> dict[str, Any]:
     """Handle resurrection scroll usage"""
     try:
@@ -35,8 +34,8 @@ async def handle_resurrection(
         # Update player in world service
         await world_service.update_entity(
             entity=player,
-            actor_id=request.player_id,
-            session_id=request.session_id
+            actor_id=command.player_id,
+            session_id=command.session_id
         )
         
         # Generate AI response for resurrection
@@ -45,7 +44,7 @@ async def handle_resurrection(
                 ai_response = await ai_service.generate_resurrection_response(
                     player_name=player.name,
                     player_class=player.stats.character_class.value if player.stats.character_class else "adventurer",
-                    command=request.command
+                    command=command.text
                 )
                 content = ai_response.content
                 confidence = ai_response.confidence
@@ -86,7 +85,7 @@ async def handle_resurrection(
                 "hp_restored": new_hp - old_hp
             },
             "parsing_confidence": 1.0,
-            "original_command": request.command,
+            "original_command": command.text,
             "warnings": [],
             "event_id": event_id
         }
@@ -97,6 +96,6 @@ async def handle_resurrection(
             "success": False,
             "action_type": "resurrection",
             "content": f"The scroll flickers but fails to work. Something went wrong with the resurrection.",
-            "original_command": request.command,
+            "original_command": command.text,
             "warnings": [f"Resurrection failed: {str(e)}"]
         }

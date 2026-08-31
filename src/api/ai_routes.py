@@ -4,16 +4,18 @@ API endpoints for AI-powered game interactions
 """
 import logging
 from typing import Any, Dict, List, Optional
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from config.settings import settings
 from core.context_builder import context_builder
 from core.world_service import world_service
-from domain.entities import ActorType, EntityType, Event, ActionType
-from infrastructure.ai_service import ai_service, AIResponse
+from core import narration
+from core.narration import EntityNotFound, NarrationResult
+from domain.entities import ActorType, EntityType
+from infrastructure.ai_service import ai_service
 
 logger = logging.getLogger(__name__)
 
@@ -65,168 +67,41 @@ class ContextSummaryResponse(BaseModel):
     assembly_time: float
 
 
+def _render(result: NarrationResult) -> AIInteractionResponse:
+    """Same fields, HTTP shape."""
+    return AIInteractionResponse(**result.dict())
+
+
 @router.post("/npc/dialogue", response_model=AIInteractionResponse)
-async def npc_dialogue(
-    request: NPCDialogueRequest, background_tasks: BackgroundTasks
-) -> AIInteractionResponse:
+async def npc_dialogue(request: NPCDialogueRequest) -> AIInteractionResponse:
     """Generate NPC dialogue response to player message"""
     try:
-        # Get player and NPC entities
-        player = await world_service.get_player(request.player_id)
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-        
-        npc = await world_service.get_npc(request.npc_id)
-        if not npc:
-            raise HTTPException(status_code=404, detail="NPC not found")
-        
-        # Build context for this interaction
-        context_entities, context_metrics = await context_builder.build_npc_interaction_context(
-            player=player,
-            target_npc=npc,
-            player_message=request.player_message
-        )
-        
-        # What the two of them have said to each other recently, so the NPC
-        # can carry the thread instead of restarting it every turn.
-        history = await world_service.get_dialogue_history(
-            request.player_id, request.npc_id
-        )
-
-        # Generate AI response
-        ai_response = await ai_service.generate_npc_dialogue(
-            npc=npc,
-            player_action=request.player_message,
-            context_entities=context_entities,
-            situation=request.situation_context or "",
-            history=history,
-        )
-
-        await world_service.record_dialogue_turn(
+        return _render(await narration.npc_dialogue(
             player_id=request.player_id,
             npc_id=request.npc_id,
             player_message=request.player_message,
-            npc_response=ai_response.content,
-        )
-        
-        # Create event for this interaction
-        event_id = uuid4()
-        interaction_event = Event(
-            id=event_id,
-            name=f"Dialogue between {player.name} and {npc.name}",
-            description=f"Player said: '{request.player_message}'",
-            action_type=ActionType.DIALOGUE,
-            actor_id=request.player_id,
-            actor_type=ActorType.PLAYER,
-            participants=[request.player_id, request.npc_id],
-            location_id=getattr(player, 'current_location_id', None),
-            before_state={
-                "player_message": request.player_message,
-                "npc_mood": npc.current_state.current_mood if npc.current_state else "unknown"
-            },
-            after_state={
-                "npc_response": ai_response.content,
-                "confidence": ai_response.confidence,
-                "hallucination_detected": ai_response.hallucination_detected
-            },
+            situation=request.situation_context or "",
             session_id=request.session_id,
-            confidence_score=ai_response.confidence
-        )
-        
-        # Log the interaction in background
-        background_tasks.add_task(
-            log_ai_interaction, 
-            interaction_event, 
-            request.player_id
-        )
-        
-        return AIInteractionResponse(
-            content=ai_response.content,
-            confidence=ai_response.confidence,
-            tokens_used=ai_response.tokens_used,
-            response_time=ai_response.response_time,
-            hallucination_detected=ai_response.hallucination_detected,
-            cited_entities=ai_response.cited_entities,
-            warnings=ai_response.warnings,
-            context_entities_used=len(context_entities),
-            event_id=event_id
-        )
-        
-    except HTTPException:
-        raise
+        ))
+    except EntityNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"NPC dialogue generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Dialogue generation failed: {str(e)}")
 
 
 @router.post("/world/describe", response_model=AIInteractionResponse)
-async def describe_world(
-    request: WorldDescriptionRequest, background_tasks: BackgroundTasks
-) -> AIInteractionResponse:
+async def describe_world(request: WorldDescriptionRequest) -> AIInteractionResponse:
     """Generate world/location description based on player request"""
     try:
-        # Get player entity
-        player = await world_service.get_player(request.player_id)
-        if not player:
-            raise HTTPException(status_code=404, detail="Player not found")
-        
-        # Build context for exploration
-        context_entities, context_metrics = await context_builder.build_world_exploration_context(
-            player=player,
-            exploration_query=request.request
-        )
-        
-        # Generate description
-        ai_response = await ai_service.generate_world_description(
-            player=player,
+        return _render(await narration.describe_world(
+            player_id=request.player_id,
             request=request.request,
-            context_entities=context_entities,
-            arriving=request.arriving,
-        )
-        
-        # Create event for this exploration
-        event_id = uuid4()
-        exploration_event = Event(
-            id=event_id,
-            name=f"World exploration by {player.name}",
-            description=f"Player requested: '{request.request}'",
-            action_type=ActionType.WORLD_CHANGE,
-            actor_id=request.player_id,
-            actor_type=ActorType.PLAYER,
-            participants=[request.player_id],
-            location_id=getattr(player, 'current_location_id', None),
-            before_state={
-                "exploration_request": request.request
-            },
-            after_state={
-                "description_generated": ai_response.content,
-                "confidence": ai_response.confidence
-            },
             session_id=request.session_id,
-            confidence_score=ai_response.confidence
-        )
-        
-        # Log the exploration in background
-        background_tasks.add_task(
-            log_ai_interaction,
-            exploration_event,
-            request.player_id
-        )
-        
-        return AIInteractionResponse(
-            content=ai_response.content,
-            confidence=ai_response.confidence,
-            tokens_used=ai_response.tokens_used,
-            response_time=ai_response.response_time,
-            hallucination_detected=ai_response.hallucination_detected,
-            cited_entities=ai_response.cited_entities,
-            warnings=ai_response.warnings,
-            context_entities_used=len(context_entities),
-            event_id=event_id
-        )
-        
-    except HTTPException:
-        raise
+            arriving=request.arriving,
+        ))
+    except EntityNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"World description generation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Description generation failed: {str(e)}")
@@ -301,22 +176,7 @@ async def ai_health_check() -> Dict[str, Any]:
         }
 
 
-# Background task functions
-async def log_ai_interaction(event: Event, actor_id: UUID) -> None:
-    """Log AI interaction as background task"""
-    try:
-        await world_service.create_entity(
-            entity=event,
-            actor_id=actor_id,
-            actor_type=ActorType.SYSTEM,
-            session_id=event.session_id
-        )
-        logger.info(f"Logged AI interaction event: {event.id}")
-    except Exception as e:
-        logger.error(f"Failed to log AI interaction: {e}")
 
-
-# Utility endpoints for AI management
 @router.post("/admin/reset-context-cache")
 async def reset_context_cache() -> Dict[str, str]:
     """Reset any context caching (admin endpoint)"""
