@@ -116,6 +116,7 @@ async def handle_movement(
         player_id=request.player_id,
         request=f"I have just arrived at {destination.name}. {request.command}",
         session_id=request.session_id,
+        arriving=True,
     )
 
     bg_tasks = BackgroundTasks()

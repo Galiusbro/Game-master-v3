@@ -300,6 +300,9 @@ class Player(BaseEntity):
     # Personal world view (fog of war, secrets, etc)
     known_npcs: List[UUID] = Field(default_factory=list)
     known_locations: List[UUID] = Field(default_factory=list)
+    # Items this character has actually noticed. An item can sit in a room
+    # for a long time before anyone spots it.
+    known_items: List[UUID] = Field(default_factory=list)
     personal_notes: Dict[str, str] = Field(default_factory=dict)
     
     # Roll history for this character

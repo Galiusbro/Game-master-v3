@@ -34,6 +34,9 @@ class WorldDescriptionRequest(BaseModel):
     player_id: UUID
     request: str  # What the player wants to see/explore
     session_id: Optional[UUID] = None
+    # True only when the character has just moved here, so the narration
+    # may describe the arrival instead of the room they already stand in.
+    arriving: bool = False
 
 
 class ActionResolutionRequest(BaseModel):
@@ -178,7 +181,8 @@ async def describe_world(
         ai_response = await ai_service.generate_world_description(
             player=player,
             request=request.request,
-            context_entities=context_entities
+            context_entities=context_entities,
+            arriving=request.arriving,
         )
         
         # Create event for this exploration

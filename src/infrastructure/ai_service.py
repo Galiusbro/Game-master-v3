@@ -744,9 +744,15 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
         request: str,
         context_entities: List[BaseEntity],
         dice_context: str = "",
-        max_retries: int = 2
+        max_retries: int = 2,
+        arriving: bool = False,
     ) -> AIResponse:
-        """Generate world/location description"""
+        """Generate world/location description.
+
+        Set `arriving` when the character has just moved here — otherwise
+        the prompt tells the model they are already inside, which is the
+        common case and stops it re-narrating their entrance.
+        """
         start_time = time.time()
         
         # Build context
@@ -773,9 +779,24 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
                 context_parts.append("")
                 entities_parts.append(f"- {entity.name} ({entity.type.value})")
         
+        # Say plainly where the character already is. Without it the model
+        # narrates them arriving — pushing open the tavern door they are
+        # standing well inside of.
+        here = next(
+            (e for e in context_entities if e.id == player.current_location_id),
+            None,
+        )
+        if here is not None and not arriving:
+            context_parts.insert(
+                0,
+                f"{player.name} is ALREADY INSIDE {here.name}. Describe it from "
+                "where they stand; do not narrate them arriving, entering, or "
+                "opening a door.\n",
+            )
+
         context = "\n".join(context_parts)
         entities = "\n".join(entities_parts)
-        
+
         logger.info(f"Final context length: {len(context)} chars, {len(entities_parts)} entities")
         
         template = self.templates["world_description"]
