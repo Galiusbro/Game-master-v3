@@ -12,8 +12,8 @@ from neo4j.exceptions import ServiceUnavailable, TransientError
 
 from config.settings import settings
 from domain.entities import (
-    BaseEntity, EntityType, Player, NPC, Location, Item, Event, Quest,
-    ChangeLogEntry
+    ActionType, BaseEntity, EntityType, Player, NPC, Location, Item, Event,
+    Quest, ChangeLogEntry
 )
 
 logger = logging.getLogger(__name__)
@@ -347,6 +347,49 @@ class GraphDatabase:
         
         return entities
     
+    async def get_recent_events(
+        self,
+        action_type: Optional[ActionType] = None,
+        min_confidence: float = 0.0,
+        limit: int = 100,
+    ) -> List[BaseEntity]:
+        """Most recent Event nodes, newest first.
+
+        `min_confidence` excludes interactions that did not really happen:
+        a failed generation or a failed write is logged with a confidence
+        of 0.0 — the same convention WorldService uses when a mutation
+        raises, and the one snapshot rollback uses to skip non-mutations.
+        Filtering on it beats inspecting the text of the stored response.
+
+        Participants are stored as a JSON string rather than an array, so
+        callers that need to match on them should do it on the typed
+        entities this returns, not in the query.
+        """
+        filters = ["e.confidence_score > $min_confidence"]
+        params: Dict[str, Any] = {"min_confidence": min_confidence}
+
+        if action_type is not None:
+            filters.append("e.action_type = $action_type")
+            params["action_type"] = action_type.value
+
+        query = f"""
+        MATCH (e:Event:Entity)
+        WHERE {" AND ".join(filters)}
+        RETURN e, labels(e) as labels
+        ORDER BY e.created_at DESC
+        LIMIT {int(limit)}
+        """
+
+        entities = []
+        async with self.session() as session:
+            result = await session.run(query, **params)
+            async for record in result:
+                entity = self._record_to_entity(record)
+                if entity:
+                    entities.append(entity)
+
+        return entities
+
     def _record_to_entity(self, record: Any) -> Optional[BaseEntity]:
         """Convert Neo4j record to domain entity"""
         node = record["e"]

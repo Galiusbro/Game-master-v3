@@ -279,6 +279,78 @@ class WorldService:
         entity = await self.get_entity(location_id, EntityType.LOCATION)
         return entity if isinstance(entity, Location) else None
 
+    async def get_dialogue_history(
+        self, player_id: UUID, npc_id: UUID, limit: int = 6
+    ) -> List[Dict[str, str]]:
+        """Recent exchanges between a player and an NPC.
+
+        Redis holds this for speed, but it is a cache and not the record:
+        every exchange is also written to the graph as a dialogue Event.
+        On a miss — a restart, a flush, or simply a long enough break —
+        the conversation is rebuilt from those events, so an NPC does not
+        forget someone it has actually met.
+        """
+        cached = await cache_service.get_dialogue_history(player_id, npc_id)
+        if cached:
+            return cached
+
+        history = await self._dialogue_history_from_events(player_id, npc_id, limit)
+        if history:
+            await cache_service.set_dialogue_history(player_id, npc_id, history)
+            logger.info(
+                f"Rebuilt {len(history)} dialogue turns for {player_id} "
+                f"and {npc_id} from the event log"
+            )
+        return history
+
+    async def _dialogue_history_from_events(
+        self, player_id: UUID, npc_id: UUID, limit: int
+    ) -> List[Dict[str, str]]:
+        """Reconstruct a conversation from the durable event log.
+
+        The graph narrows by action type and confidence; participants are
+        matched here, on the typed entities, because they are stored as a
+        JSON string rather than an array.
+        """
+        try:
+            events = await graph_db.get_recent_events(
+                action_type=ActionType.DIALOGUE,
+                min_confidence=0.0,
+                limit=max(limit * 10, 50),
+            )
+        except Exception as e:
+            logger.warning(f"Could not read dialogue events: {e}")
+            return []
+
+        turns: List[Tuple[datetime, Dict[str, str]]] = []
+        for event in events:
+            if not isinstance(event, Event):
+                continue
+            participants = set(event.participants)
+            if player_id not in participants or npc_id not in participants:
+                continue
+
+            said = (event.before_state or {}).get("player_message")
+            replied = (event.after_state or {}).get("npc_response")
+            if not said or not replied:
+                continue
+
+            turns.append((event.created_at, {"player": said, "npc": replied}))
+
+        turns.sort(key=lambda item: item[0])
+        return [turn for _, turn in turns[-limit:]]
+
+    async def record_dialogue_turn(
+        self, player_id: UUID, npc_id: UUID, player_message: str, npc_response: str
+    ) -> None:
+        """Add one exchange to the cached conversation."""
+        await cache_service.append_dialogue_turn(
+            player_id=player_id,
+            npc_id=npc_id,
+            player_message=player_message,
+            npc_response=npc_response,
+        )
+
     async def search_entities(
         self,
         query: str,

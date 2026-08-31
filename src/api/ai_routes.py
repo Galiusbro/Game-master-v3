@@ -14,7 +14,6 @@ from core.context_builder import context_builder
 from core.world_service import world_service
 from domain.entities import ActorType, EntityType, Event, ActionType
 from infrastructure.ai_service import ai_service, AIResponse
-from infrastructure.cache_service import cache_service
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +89,7 @@ async def npc_dialogue(
         
         # What the two of them have said to each other recently, so the NPC
         # can carry the thread instead of restarting it every turn.
-        history = await cache_service.get_dialogue_history(
+        history = await world_service.get_dialogue_history(
             request.player_id, request.npc_id
         )
 
@@ -103,7 +102,7 @@ async def npc_dialogue(
             history=history,
         )
 
-        await cache_service.append_dialogue_turn(
+        await world_service.record_dialogue_turn(
             player_id=request.player_id,
             npc_id=request.npc_id,
             player_message=request.player_message,

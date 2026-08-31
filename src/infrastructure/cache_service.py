@@ -403,6 +403,15 @@ class CacheService:
             return []
         return [turn for turn in history if isinstance(turn, dict)]
 
+    async def set_dialogue_history(
+        self, player_id: UUID, npc_id: UUID, history: List[Dict[str, str]]
+    ) -> bool:
+        """Replace the cached conversation, e.g. after rebuilding it."""
+        key = CacheKey.DIALOGUE_HISTORY.format(
+            player_id=str(player_id), npc_id=str(npc_id)
+        )
+        return await self.set(key, history, self.ttl['dialogue_history'])
+
     async def append_dialogue_turn(
         self,
         player_id: UUID,
