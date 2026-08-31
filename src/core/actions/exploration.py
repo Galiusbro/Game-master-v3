@@ -28,6 +28,7 @@ async def handle_exploration(
         player_id=command.player_id,
         request=command.text,
         session_id=command.session_id,
+        world_id=command.world_id,
     )
     
     return {

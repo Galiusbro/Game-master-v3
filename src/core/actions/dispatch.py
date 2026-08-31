@@ -21,6 +21,7 @@ from core.actions.search import handle_search
 from core.actions.skill_check import handle_skill_check
 from core.actions.trade import handle_trade
 from core.actions.unknown import handle_unknown
+from core.narration import EntityNotFound
 from core.semantic_parser import semantic_parser
 from core.social_checks import BEFRIEND_INTENT_THRESHOLD
 from core.world_service import world_service
@@ -53,8 +54,16 @@ async def execute_command(command: GameCommand) -> Dict[str, Any]:
         f"Processing command: '{command.text}' for player {command.player_id}"
     )
 
-    player = await world_service.get_player(command.player_id)
-    if player and player.effective_hit_points <= 0:
+    player = await world_service.get_player(command.player_id, world_id=command.world_id)
+    if not player:
+        # Either there is no such character, or it belongs to another world.
+        # Both are the same refusal from here: you cannot act in a world you
+        # are not in.
+        raise EntityNotFound(
+            f"No character {command.player_id} in world {command.world_id}"
+        )
+
+    if player.effective_hit_points <= 0:
         return await _handle_while_dead(command, player)
 
     parsed = await semantic_parser.parse_command(

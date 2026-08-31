@@ -56,7 +56,11 @@ async def create_location_entity(
         is_safe=is_safe if is_safe is not None else True,
     )
     
-    return await world_service.create_entity(entity=entity, actor_id=actor_id)
+    # During generation the acting party is the world itself, so it is
+    # also what everything created here belongs to.
+    return await world_service.create_entity(
+        entity=entity, actor_id=actor_id, world_id=actor_id
+    )
 
 
 async def link_to_parent(

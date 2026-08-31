@@ -57,7 +57,7 @@ async def handle_movement(
 
     warnings: list[str] = []
 
-    player = await world_service.get_player(command.player_id)
+    player = await world_service.get_player(command.player_id, world_id=command.world_id)
     if not isinstance(player, Player):
         return {
             "success": False,

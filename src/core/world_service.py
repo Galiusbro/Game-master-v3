@@ -74,9 +74,19 @@ class WorldService:
         actor_id: UUID,
         actor_type: ActorType = ActorType.SYSTEM,
         session_id: Optional[UUID] = None,
+        world_id: Optional[UUID] = None,
     ) -> BaseEntity:
-        """Create a new entity with full transaction logging"""
-        
+        """Create a new entity with full transaction logging.
+
+        `world_id` stamps which world the entity belongs to when the entity
+        does not already say so. Queries scoped to a world will not return
+        anything left unstamped, so callers that know the world should pass
+        it.
+        """
+
+        if world_id and entity.world_id is None:
+            entity.world_id = world_id
+
         # Create event for this action
         event_id = uuid4()
         
@@ -242,16 +252,25 @@ class WorldService:
             )
             raise
     
-    async def get_entity(self, entity_id: UUID, entity_type: Optional[EntityType] = None) -> Optional[BaseEntity]:
-        """Get entity by ID with caching"""
-        
+    async def get_entity(
+        self,
+        entity_id: UUID,
+        entity_type: Optional[EntityType] = None,
+        world_id: Optional[UUID] = None,
+    ) -> Optional[BaseEntity]:
+        """Get entity by ID with caching, optionally confined to one world"""
+
         # Try cache first
         cached_entity = await cache_service.get_entity(entity_id, entity_type)
         if cached_entity:
+            # The cache is keyed by id alone, so a hit still has to answer
+            # for the world it came from.
+            if world_id and cached_entity.world_id != world_id:
+                return None
             return cached_entity
-        
+
         # Cache miss - get from database
-        entity = await graph_db.get_entity(entity_id, entity_type)
+        entity = await graph_db.get_entity(entity_id, entity_type, world_id=world_id)
         
         # Cache the result if found
         if entity:
@@ -259,28 +278,44 @@ class WorldService:
         
         return entity
     
-    async def get_player(self, player_id: UUID) -> Optional[Player]:
+    async def get_player(
+        self,
+        player_id: UUID,
+        world_id: Optional[UUID] = None,
+    ) -> Optional[Player]:
         """Get a player by id, or None if missing or not a player.
 
         get_entity has to return the base type because it serves every
         kind of entity; callers that know what they asked for should use
         these instead of narrowing by hand.
         """
-        entity = await self.get_entity(player_id, EntityType.PLAYER)
+        entity = await self.get_entity(player_id, EntityType.PLAYER, world_id=world_id)
         return entity if isinstance(entity, Player) else None
 
-    async def get_npc(self, npc_id: UUID) -> Optional[NPC]:
+    async def get_npc(
+        self,
+        npc_id: UUID,
+        world_id: Optional[UUID] = None,
+    ) -> Optional[NPC]:
         """Get an NPC by id, or None if missing or not an NPC."""
-        entity = await self.get_entity(npc_id, EntityType.NPC)
+        entity = await self.get_entity(npc_id, EntityType.NPC, world_id=world_id)
         return entity if isinstance(entity, NPC) else None
 
-    async def get_location(self, location_id: UUID) -> Optional[Location]:
+    async def get_location(
+        self,
+        location_id: UUID,
+        world_id: Optional[UUID] = None,
+    ) -> Optional[Location]:
         """Get a location by id, or None if missing or not a location."""
-        entity = await self.get_entity(location_id, EntityType.LOCATION)
+        entity = await self.get_entity(location_id, EntityType.LOCATION, world_id=world_id)
         return entity if isinstance(entity, Location) else None
 
     async def get_dialogue_history(
-        self, player_id: UUID, npc_id: UUID, limit: int = 6
+        self,
+        player_id: UUID,
+        npc_id: UUID,
+        limit: int = 6,
+        world_id: Optional[UUID] = None,
     ) -> List[Dict[str, str]]:
         """Recent exchanges between a player and an NPC.
 
@@ -294,7 +329,9 @@ class WorldService:
         if cached:
             return cached
 
-        history = await self._dialogue_history_from_events(player_id, npc_id, limit)
+        history = await self._dialogue_history_from_events(
+            player_id, npc_id, limit, world_id
+        )
         if history:
             await cache_service.set_dialogue_history(player_id, npc_id, history)
             logger.info(
@@ -304,7 +341,11 @@ class WorldService:
         return history
 
     async def _dialogue_history_from_events(
-        self, player_id: UUID, npc_id: UUID, limit: int
+        self,
+        player_id: UUID,
+        npc_id: UUID,
+        limit: int,
+        world_id: Optional[UUID] = None,
     ) -> List[Dict[str, str]]:
         """Reconstruct a conversation from the durable event log.
 
@@ -317,6 +358,7 @@ class WorldService:
                 action_type=ActionType.DIALOGUE,
                 min_confidence=0.0,
                 limit=max(limit * 10, 50),
+                world_id=world_id,
             )
         except Exception as e:
             logger.warning(f"Could not read dialogue events: {e}")
@@ -358,8 +400,15 @@ class WorldService:
         entity_types: Optional[List[EntityType]] = None,
         include_graph_context: bool = False,
         filters: Optional[Dict[str, Any]] = None,
+        world_id: Optional[UUID] = None,
     ) -> List[Tuple[BaseEntity, float]]:
-        """Search entities with optional graph context expansion"""
+        """Search entities with optional graph context expansion.
+
+        `world_id` rides the existing payload filter: every entity stores
+        it, so confining a search to one world costs nothing extra.
+        """
+        if world_id:
+            filters = {**(filters or {}), "world_id": str(world_id)}
         
         # Try cache first (for simple searches without graph context)
         if not include_graph_context:
@@ -385,8 +434,10 @@ class WorldService:
         # Expand results with graph context
         enriched_results = []
         for entity, score in vector_results:
-            # Get full entity from graph DB
-            full_entity = await graph_db.get_entity(entity.id, entity.type)
+            # Get full entity from graph DB, staying inside the same world
+            full_entity = await graph_db.get_entity(
+                entity.id, entity.type, world_id=world_id
+            )
             if full_entity:
                 enriched_results.append((full_entity, score))
         
@@ -415,6 +466,7 @@ class WorldService:
         entity_id: UUID,
         max_depth: int = 2,
         entity_types: Optional[List[EntityType]] = None,
+        world_id: Optional[UUID] = None,
     ) -> List[BaseEntity]:
         """Get contextual entities related to the given entity with caching"""
         
@@ -428,6 +480,7 @@ class WorldService:
             start_entity_id=entity_id,
             max_depth=max_depth,
             entity_types=entity_types,
+            world_id=world_id,
         )
         
         # Cache the results
@@ -438,11 +491,14 @@ class WorldService:
     async def get_entities_by_type(
         self,
         entity_type: EntityType,
-        limit: int = 100
+        limit: int = 100,
+        world_id: Optional[UUID] = None,
     ) -> List[BaseEntity]:
         """Get all entities of a specific type"""
         try:
-            entities: List[BaseEntity] = await graph_db.get_entities_by_type(entity_type, limit)
+            entities: List[BaseEntity] = await graph_db.get_entities_by_type(
+                entity_type, limit, world_id=world_id
+            )
             logger.debug(f"Retrieved {len(entities)} {entity_type.value} entities")
             return entities
         except Exception as e:

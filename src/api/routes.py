@@ -39,6 +39,9 @@ router.include_router(streaming_router)
 class CreateEntityRequest(BaseModel):
     entity_data: Dict[str, Any]
     entity_type: EntityType
+    # Which world the entity joins. Left out, it belongs to none and stays
+    # invisible to world-scoped queries.
+    world_id: Optional[UUID] = None
     actor_id: Optional[UUID] = None
     session_id: Optional[UUID] = None
 
@@ -125,6 +128,7 @@ async def create_entity(request: CreateEntityRequest) -> EntityResponse:
         actor_id = request.actor_id or uuid4()
         
         created_entity = await world_service.create_entity(
+            world_id=request.world_id,
             entity=entity,
             actor_id=actor_id,
             actor_type=ActorType.SYSTEM,

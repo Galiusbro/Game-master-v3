@@ -106,7 +106,9 @@ async def generate_basic_npcs(
                 },
             )
 
-            created = await world_service.create_entity(entity=npc, actor_id=world_actor_id)
+            created = await world_service.create_entity(
+                entity=npc, actor_id=world_actor_id, world_id=world_actor_id
+            )
             created_npc_ids.append(str(created.id))
 
             # Link NPC to building
@@ -201,7 +203,9 @@ async def generate_citizens_for_districts(
                     },
                 )
 
-                created_npc = await world_service.create_entity(entity=npc, actor_id=world_actor_id)
+                created_npc = await world_service.create_entity(
+                entity=npc, actor_id=world_actor_id, world_id=world_actor_id
+            )
                 created.append(str(created_npc.id))
 
                 await world_service.create_relationship(
@@ -293,7 +297,9 @@ async def generate_rare_specialists(
                 },
             )
 
-            created_npc = await world_service.create_entity(entity=npc, actor_id=world_actor_id)
+            created_npc = await world_service.create_entity(
+                entity=npc, actor_id=world_actor_id, world_id=world_actor_id
+            )
             created.append(str(created_npc.id))
 
             await world_service.create_relationship(

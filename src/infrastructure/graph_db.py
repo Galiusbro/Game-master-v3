@@ -161,6 +161,7 @@ class GraphDatabase:
             
             # Performance indexes
             "CREATE INDEX entity_type_idx IF NOT EXISTS FOR (e:Entity) ON (e.type)",
+            "CREATE INDEX entity_world_idx IF NOT EXISTS FOR (e:Entity) ON (e.world_id)",
             "CREATE INDEX entity_created_idx IF NOT EXISTS FOR (e:Entity) ON (e.created_at)",
             "CREATE INDEX event_timestamp_idx IF NOT EXISTS FOR (e:Event) ON (e.created_at)",
             "CREATE INDEX npc_importance_idx IF NOT EXISTS FOR (n:NPC) ON (n.importance_level)",
@@ -199,16 +200,27 @@ class GraphDatabase:
             logger.info(f"Created {entity.type} entity: {entity.id}")
             return entity
     
-    async def get_entity(self, entity_id: UUID, entity_type: Optional[EntityType] = None) -> Optional[BaseEntity]:
-        """Get entity by ID"""
+    async def get_entity(
+        self,
+        entity_id: UUID,
+        entity_type: Optional[EntityType] = None,
+        world_id: Optional[UUID] = None,
+    ) -> Optional[BaseEntity]:
+        """Get entity by ID, optionally confined to one world"""
         type_filter = f":{entity_type.value.title()}" if entity_type else ""
+        world_filter = " AND e.world_id = $world_id" if world_id else ""
         query = f"""
         MATCH (e:Entity{type_filter} {{id: $entity_id}})
+        WHERE true{world_filter}
         RETURN e, labels(e) as labels
         """
-        
+
+        params: Dict[str, Any] = {"entity_id": str(entity_id)}
+        if world_id:
+            params["world_id"] = str(world_id)
+
         async with self.session() as session:
-            result = await session.run(query, entity_id=str(entity_id))
+            result = await session.run(query, **params)
             record = await result.single()
             
             if not record:
@@ -291,9 +303,10 @@ class GraphDatabase:
         start_entity_id: UUID,
         max_depth: int = settings.graph_traversal_max_depth,
         relationship_types: Optional[List[str]] = None,
-        entity_types: Optional[List[EntityType]] = None
+        entity_types: Optional[List[EntityType]] = None,
+        world_id: Optional[UUID] = None,
     ) -> List[BaseEntity]:
-        """Traverse graph from starting entity"""
+        """Traverse graph from starting entity, optionally within one world"""
         
         # Build the relationship pattern correctly for Neo4j
         if relationship_types:
@@ -304,17 +317,23 @@ class GraphDatabase:
         
         # Build query - Neo4j doesn't support complex label patterns in MATCH easily
         # So we'll filter after matching all Entity nodes
+        world_filter = " WHERE connected.world_id = $world_id" if world_id else ""
         query = f"""
         MATCH path = (start:Entity {{id: $start_id}})-{rel_pattern}-(connected:Entity)
+        {world_filter}
         WITH DISTINCT connected, labels(connected) as labels, length(path) as path_length
         RETURN connected AS e, labels AS labels, path_length
         ORDER BY path_length, connected.importance_level DESC, connected.created_at DESC
         LIMIT {settings.graph_traversal_max_width}
         """
         
+        params: Dict[str, Any] = {"start_id": str(start_entity_id)}
+        if world_id:
+            params["world_id"] = str(world_id)
+
         entities = []
         async with self.session() as session:
-            result = await session.run(query, start_id=str(start_entity_id))
+            result = await session.run(query, **params)
             async for record in result:
                 entity = self._record_to_entity(record)
                 if entity:
@@ -328,18 +347,29 @@ class GraphDatabase:
         logger.debug(f"Traversed graph from {start_entity_id}, found {len(entities)} entities")
         return entities
     
-    async def get_entities_by_type(self, entity_type: EntityType, limit: int = 100) -> List[BaseEntity]:
-        """Get all entities of a specific type"""
+    async def get_entities_by_type(
+        self,
+        entity_type: EntityType,
+        limit: int = 100,
+        world_id: Optional[UUID] = None,
+    ) -> List[BaseEntity]:
+        """Get all entities of a specific type, optionally within one world"""
+        world_filter = "WHERE e.world_id = $world_id" if world_id else ""
         query = f"""
         MATCH (e:{entity_type.value.title()}:Entity)
+        {world_filter}
         RETURN e, labels(e) as labels
         ORDER BY e.created_at DESC
         LIMIT {limit}
         """
-        
+
+        params: Dict[str, Any] = {}
+        if world_id:
+            params["world_id"] = str(world_id)
+
         entities = []
         async with self.session() as session:
-            result = await session.run(query)
+            result = await session.run(query, **params)
             async for record in result:
                 entity = self._record_to_entity(record)
                 if entity:
@@ -352,6 +382,7 @@ class GraphDatabase:
         action_type: Optional[ActionType] = None,
         min_confidence: float = 0.0,
         limit: int = 100,
+        world_id: Optional[UUID] = None,
     ) -> List[BaseEntity]:
         """Most recent Event nodes, newest first.
 
@@ -371,6 +402,10 @@ class GraphDatabase:
         if action_type is not None:
             filters.append("e.action_type = $action_type")
             params["action_type"] = action_type.value
+
+        if world_id is not None:
+            filters.append("e.world_id = $world_id")
+            params["world_id"] = str(world_id)
 
         query = f"""
         MATCH (e:Event:Entity)

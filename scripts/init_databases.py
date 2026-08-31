@@ -90,28 +90,41 @@ async def create_sample_world():
     
     # System actor for world creation
     system_actor = uuid4()
-    
+
     try:
+        # Everything below belongs to one world. Entities left unstamped are
+        # invisible to world-scoped queries, so the world comes first.
+        logger.info("Creating the demo world...")
+        world = await world_service.create_entity(
+            Location(
+                name="Demo World",
+                description="A small world for trying the engine out.",
+            ),
+            actor_id=system_actor,
+        )
+        world_id = world.id
+        logger.info(f"Created world: {world.name} ({world_id})")
+
         # Create all entities
         logger.info("Creating sample world entities...")
-        
+
         created_tavern = await world_service.create_entity(
-            tavern, actor_id=system_actor
+            tavern, actor_id=system_actor, world_id=world_id
         )
         logger.info(f"Created tavern: {created_tavern.name}")
         
         created_bartender = await world_service.create_entity(
-            bartender, actor_id=system_actor
+            bartender, actor_id=system_actor, world_id=world_id
         )
         logger.info(f"Created NPC: {created_bartender.name}")
         
         created_ale = await world_service.create_entity(
-            ale_mug, actor_id=system_actor
+            ale_mug, actor_id=system_actor, world_id=world_id
         )
         logger.info(f"Created item: {created_ale.name}")
         
         created_player = await world_service.create_entity(
-            player, actor_id=system_actor
+            player, actor_id=system_actor, world_id=world_id
         )
         logger.info(f"Created player: {created_player.name}")
         

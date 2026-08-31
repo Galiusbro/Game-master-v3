@@ -41,7 +41,7 @@ async def handle_search(
     target = (parsed.intent_details or {}).get("target", "something")
     warnings: List[str] = []
 
-    player = await world_service.get_player(command.player_id)
+    player = await world_service.get_player(command.player_id, world_id=command.world_id)
     if not player:
         return {
             "success": False,

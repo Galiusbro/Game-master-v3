@@ -266,6 +266,10 @@ class BaseEntity(BaseModel):
     """Base class for all game entities"""
     id: UUID = Field(default_factory=uuid4)
     type: EntityType
+    # Which world this belongs to. Optional only so that entities written
+    # before worlds became separate keep loading; anything created now
+    # carries it, and queries scoped to a world will not return the rest.
+    world_id: Optional[UUID] = None
     name: str
     description: str = ""
     metadata: Dict[str, Any] = Field(default_factory=dict)

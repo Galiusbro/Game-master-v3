@@ -29,6 +29,7 @@ async def handle_unknown(
         player_id=command.player_id,
         request=f"I try to: {command.text}",
         session_id=command.session_id,
+        world_id=command.world_id,
     )
     
     return {

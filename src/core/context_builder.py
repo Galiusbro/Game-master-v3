@@ -157,7 +157,7 @@ class SmartContextBuilder:
         current_location_id = player.current_location_id
         if current_location_id:
             try:
-                current_location = await world_service.get_location(current_location_id)
+                current_location = await world_service.get_location(current_location_id, world_id=player.world_id)
                 if current_location and current_location.id not in seen_entities:
                     priority = self.calculate_entity_priority(current_location, player, interaction_target)
                     entities_with_priority.append((current_location, priority))
@@ -168,7 +168,8 @@ class SmartContextBuilder:
                         location_context = await world_service.get_entity_context(
                             current_location_id,
                             max_depth=1,  # Only immediate connections
-                            entity_types=[EntityType.NPC, EntityType.ITEM]
+                            entity_types=[EntityType.NPC, EntityType.ITEM],
+                            world_id=player.world_id
                         )
                     except Exception as e:
                         logger.warning(f"Failed to get current location context: {e}")
@@ -189,7 +190,8 @@ class SmartContextBuilder:
                 search_results = await world_service.search_entities(
                     query=search_query,
                     limit=10,
-                    include_graph_context=False
+                    include_graph_context=False,
+                    world_id=player.world_id,
                 )
                 
                 for entity, score in search_results:
@@ -240,7 +242,8 @@ class SmartContextBuilder:
             player_context = await world_service.get_entity_context(
                 player.id,
                 max_depth=2,
-                entity_types=[EntityType.NPC, EntityType.LOCATION, EntityType.QUEST, EntityType.ITEM]
+                entity_types=[EntityType.NPC, EntityType.LOCATION, EntityType.QUEST, EntityType.ITEM],
+                world_id=player.world_id,
             )
             
             for entity in player_context:

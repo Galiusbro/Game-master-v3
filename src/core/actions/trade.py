@@ -34,6 +34,7 @@ async def handle_trade(
             player_message=trade_message,
             situation="trade",
             session_id=command.session_id,
+            world_id=command.world_id,
         )
         
         return {

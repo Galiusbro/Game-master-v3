@@ -93,7 +93,7 @@ class TestEntityOperations:
         # Verify result
         assert result == sample_location
         world_service.graph_db.get_entity.assert_called_once_with(
-            sample_location.id, EntityType.LOCATION
+            sample_location.id, EntityType.LOCATION, world_id=None
         )
     
     @pytest.mark.integration
@@ -213,7 +213,7 @@ class TestSearchOperations:
         
         # Verify graph DB was called for full entity
         world_service.graph_db.get_entity.assert_called_once_with(
-            sample_location.id, sample_location.type
+            sample_location.id, sample_location.type, world_id=None
         )
     
     @pytest.mark.integration
@@ -237,7 +237,8 @@ class TestSearchOperations:
         world_service.graph_db.traverse_graph.assert_called_once_with(
             start_entity_id=sample_location.id,
             max_depth=2,
-            entity_types=[EntityType.NPC, EntityType.ITEM]
+            entity_types=[EntityType.NPC, EntityType.ITEM],
+            world_id=None
         )
 
 

@@ -133,7 +133,9 @@ async def generate_bosses(
                 },
             )
 
-            created = await world_service.create_entity(entity=npc, actor_id=world_actor_id)
+            created = await world_service.create_entity(
+                entity=npc, actor_id=world_actor_id, world_id=world_actor_id
+            )
             created_boss_ids.append(str(created.id))
 
             # Relationships

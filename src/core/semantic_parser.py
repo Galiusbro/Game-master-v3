@@ -103,7 +103,7 @@ class SemanticParser:
         logger.debug(f"Detected action: {action} (confidence: {action_confidence:.2f})")
         
         # 4. Resolve entities mentioned in command
-        entities = await self._resolve_entities(raw_command, context)
+        entities = await self._resolve_entities(raw_command, context, world_id)
         
         # 5. Extract message/details based on action type
         message, details = self._extract_action_details(raw_command, action)
@@ -199,7 +199,7 @@ class SemanticParser:
             
             # Get player entity - use dynamic import to avoid circular dependency
             from core.world_service import world_service
-            player = await world_service.get_player(player_id)
+            player = await world_service.get_player(player_id, world_id=world_id)
             if not player:
                 logger.warning(f"Player {player_id} not found")
                 return []
@@ -213,7 +213,7 @@ class SemanticParser:
                 current_loc_id = None
 
             if current_loc_id:
-                location = await world_service.get_location(current_loc_id)
+                location = await world_service.get_location(current_loc_id, world_id=world_id)
                 if location:
                     context_entities.append(location)
                     
@@ -222,7 +222,8 @@ class SemanticParser:
                         nearby = await world_service.get_entity_context(
                             entity_id=current_loc_id,
                             max_depth=1,
-                            entity_types=[EntityType.NPC, EntityType.ITEM]
+                            entity_types=[EntityType.NPC, EntityType.ITEM],
+                            world_id=world_id,
                         )
                     except Exception as e:
                         logger.warning(f"Failed to get location neighbors: {e}")
@@ -237,9 +238,10 @@ class SemanticParser:
             return []
 
     async def _resolve_entities(
-        self, 
-        command: str, 
-        context: List[BaseEntity]
+        self,
+        command: str,
+        context: List[BaseEntity],
+        world_id: Optional[UUID] = None,
     ) -> Dict[str, Any]:
         """Resolve entity references in command to actual IDs"""
         
@@ -268,7 +270,8 @@ class SemanticParser:
                     query=mention_text,
                     entity_types=[mention_type],
                     limit=1,
-                    score_threshold=0.0
+                    score_threshold=0.0,
+                    filters={"world_id": str(world_id)} if world_id else None,
                 )
                 
                 if vector_results:

@@ -351,6 +351,11 @@ class VectorDatabase:
             entity_data = {
                 "id": UUID(payload["entity_id"]),
                 "type": EntityType(payload["entity_type"]),
+                # Carry the world through: a result that forgot which world
+                # it came from cannot be used for anything world-scoped.
+                "world_id": (
+                    UUID(payload["world_id"]) if payload.get("world_id") else None
+                ),
                 "name": payload["name"],
                 "description": payload["description"],
                 "metadata": {},
@@ -403,6 +408,11 @@ class VectorDatabase:
             entity_data = {
                 "id": UUID(payload["entity_id"]),
                 "type": EntityType(payload["entity_type"]),
+                # Carry the world through: a result that forgot which world
+                # it came from cannot be used for anything world-scoped.
+                "world_id": (
+                    UUID(payload["world_id"]) if payload.get("world_id") else None
+                ),
                 "name": payload["name"],
                 "description": payload["description"],
                 "metadata": {},

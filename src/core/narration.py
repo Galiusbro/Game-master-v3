@@ -58,13 +58,14 @@ async def npc_dialogue(
     player_message: str,
     situation: str = "",
     session_id: Optional[UUID] = None,
+    world_id: Optional[UUID] = None,
 ) -> NarrationResult:
     """Have an NPC answer a player, in character and in context."""
-    player = await world_service.get_player(player_id)
+    player = await world_service.get_player(player_id, world_id=world_id)
     if not player:
         raise EntityNotFound("Player not found")
 
-    npc = await world_service.get_npc(npc_id)
+    npc = await world_service.get_npc(npc_id, world_id=world_id)
     if not npc:
         raise EntityNotFound("NPC not found")
 
@@ -76,7 +77,9 @@ async def npc_dialogue(
 
     # What the two of them have said to each other recently, so the NPC
     # can carry the thread instead of restarting it every turn.
-    history = await world_service.get_dialogue_history(player_id, npc_id)
+    history = await world_service.get_dialogue_history(
+        player_id, npc_id, world_id=player.world_id
+    )
 
     ai_response = await ai_service.generate_npc_dialogue(
         npc=npc,
@@ -103,6 +106,7 @@ async def npc_dialogue(
             actor_id=player_id,
             actor_type=ActorType.PLAYER,
             participants=[player_id, npc_id],
+            world_id=player.world_id,
             location_id=player.current_location_id,
             before_state={
                 "player_message": player_message,
@@ -137,13 +141,14 @@ async def describe_world(
     request: str,
     session_id: Optional[UUID] = None,
     arriving: bool = False,
+    world_id: Optional[UUID] = None,
 ) -> NarrationResult:
     """Describe the scene around a player.
 
     `arriving` marks the one case where the character has just moved here
     and the narration may describe them turning up.
     """
-    player = await world_service.get_player(player_id)
+    player = await world_service.get_player(player_id, world_id=world_id)
     if not player:
         raise EntityNotFound("Player not found")
 
@@ -169,6 +174,7 @@ async def describe_world(
             actor_id=player_id,
             actor_type=ActorType.PLAYER,
             participants=[player_id],
+            world_id=player.world_id,
             location_id=player.current_location_id,
             before_state={"exploration_request": request},
             after_state={

@@ -40,7 +40,7 @@ async def handle_dialogue(
             # Prefer NPCs in player's current location when resolving by description
             location_filter = None
             try:
-                player = await world_service.get_player(command.player_id)
+                player = await world_service.get_player(command.player_id, world_id=command.world_id)
                 if player and getattr(player, 'current_location_id', None):
                     location_filter = {"current_location_id": str(player.current_location_id)}
             except Exception:
@@ -71,7 +71,7 @@ async def handle_dialogue(
     # CHECK IF NPC IS ALIVE BEFORE DIALOGUE!
     logger.info(f"🔍 Checking NPC status for dialogue: {parsed.target_npc_id}")
     try:
-        npc = await world_service.get_npc(parsed.target_npc_id)
+        npc = await world_service.get_npc(parsed.target_npc_id, world_id=command.world_id)
         
         if npc:
             logger.info(f"✅ NPC found: {npc.name}, is_alive: {getattr(npc, 'is_alive', 'MISSING')}")
@@ -107,7 +107,7 @@ async def handle_dialogue(
     try:
         intent, intent_conf = command_classifier.classify_social_intent(command.text)
         logger.info(f"Social intent detected: intent={intent}, confidence={intent_conf:.3f} for command='{command.text}'")
-        player = await world_service.get_player(command.player_id)
+        player = await world_service.get_player(command.player_id, world_id=command.world_id)
         if intent == "befriend" and intent_conf >= BEFRIEND_INTENT_THRESHOLD and npc and player:
 
             # Hard blockers: same location and NPC is alive checked above
@@ -182,6 +182,7 @@ async def handle_dialogue(
         # the old "Hello" default meant the NPC never heard the question.
         player_message=parsed.message or command.text,
         session_id=command.session_id,
+        world_id=command.world_id,
     )
     
     return {

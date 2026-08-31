@@ -33,7 +33,7 @@ async def handle_magic(
         logger.info(f"✨ Resurrection spell detected! Confidence: {resurrection_conf:.2f}, NPC: {parsed.target_npc_id}")
         
         try:
-            npc = await world_service.get_npc(parsed.target_npc_id)
+            npc = await world_service.get_npc(parsed.target_npc_id, world_id=command.world_id)
             
             if npc and hasattr(npc, 'is_alive') and not npc.is_alive:
                 logger.info(f"💀➡️😇 Resurrecting {npc.name}!")
@@ -63,6 +63,7 @@ async def handle_magic(
                         action_type=ActionType.MAGIC,
                         actor_id=command.player_id,
                         actor_type=ActorType.PLAYER,
+                        world_id=command.world_id,
                         participants=[command.player_id, npc.id],
                         location_id=npc.current_state.current_location_id,
                         before_state={"npc_alive": False, "spell_cast": "resurrection"},
