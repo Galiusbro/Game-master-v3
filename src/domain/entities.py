@@ -371,6 +371,23 @@ class NPC(BaseEntity):
     is_alive: bool = True
     importance_level: int = 1  # 1-10, affects caching and context priority
 
+    # Combat statistics. Defaults describe ordinary townsfolk: a real but
+    # short fight for a level 1 character. Bosses override these through
+    # metadata, which worldgen already populates.
+    max_hit_points: int = 8
+    current_hit_points: int = 8
+    armor_class: int = 12
+    attack_bonus: int = 2
+    damage_dice: str = "1d4"
+
+    @property
+    def effective_armor_class(self) -> int:
+        """AC, preferring a value placed in metadata by world generation."""
+        try:
+            return int(self.metadata.get("armor_class", self.armor_class))
+        except (TypeError, ValueError):
+            return self.armor_class
+
 
 class Location(BaseEntity):
     """Location/place entity"""

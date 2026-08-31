@@ -187,6 +187,14 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=60)
 
     # Feature Flags
+    # Context-aware intent classification prepends the game context ("In
+    # town: …") to the command before embedding it. Measured on the demo
+    # world it moves commands away from the right category more often than
+    # towards it — "attack … with my axe" becomes stealth, "buy a mug of
+    # ale" becomes dialogue — so it stays off until the training examples
+    # are relabelled with context.
+    enable_context_classification: bool = Field(default=False)
+
     enable_hallucination_detection: bool = Field(default=True)
     enable_auto_rollback: bool = Field(default=True)
     enable_monitoring: bool = Field(default=True)

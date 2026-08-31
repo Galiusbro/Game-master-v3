@@ -25,6 +25,7 @@ except ImportError:
     EMBEDDINGS_AVAILABLE = False
 
 from domain.entities import SkillType, AbilityScore
+from config.settings import settings
 
 logger = logging.getLogger(__name__)
 
@@ -1065,6 +1066,9 @@ class CommandClassificationService:
     
     def _enhance_with_context(self, command: str, context: Optional[GameContext]) -> str:
         """Enhance command with context information for better classification"""
+        if not settings.enable_context_classification:
+            return command
+
         if not context or context == GameContext.NEUTRAL:
             return command
         
@@ -1088,6 +1092,11 @@ class CommandClassificationService:
         confidence: float
     ) -> GameAction:
         """Apply context-based adjustments to classification results"""
+        # Without context enhancement these re-classifications would embed the
+        # very same string again: no possible change, just wasted work.
+        if not settings.enable_context_classification:
+            return action
+
         if not context or confidence < 0.4:  # Don't adjust low-confidence results
             return action
         

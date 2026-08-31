@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 
 from core.semantic_parser import semantic_parser
+from core.social_checks import BEFRIEND_INTENT_THRESHOLD
 from infrastructure.command_classification_service import GameAction, command_classifier
 from core.world_service import world_service
 from core.dice_engine import dice_engine
@@ -159,7 +160,7 @@ async def process_natural_command(
             social_intent, social_conf = command_classifier.classify_social_intent(request.command)
         except Exception:
             social_intent, social_conf = None, 0.0
-        if social_intent == "befriend" and social_conf >= 0.5:
+        if social_intent == "befriend" and social_conf >= BEFRIEND_INTENT_THRESHOLD:
             dialogue_result = await handle_dialogue(request, parsed)
             return GameCommandResponse(**dialogue_result)
         

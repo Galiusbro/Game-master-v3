@@ -16,6 +16,16 @@ from domain.entities import NPC, Player, SkillType, CharacterClass
 logger = logging.getLogger(__name__)
 
 
+# Minimum confidence for treating a line as a deliberate attempt to win an
+# NPC over, rather than ordinary conversation. Measured on the demo world:
+# plain talk ("I ask Barliman for a room") scores up to 0.44, explicit
+# attempts ("I want to become friends with Barliman") score from 0.66. The
+# gap sits here. Erring high is deliberate — a missed befriend attempt is
+# just a normal conversation, while a false positive spends the player's
+# social check and puts the NPC on cooldown.
+BEFRIEND_INTENT_THRESHOLD = 0.6
+
+
 class SocialOutcome:
     """Structured result of a social check."""
 

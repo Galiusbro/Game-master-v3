@@ -15,6 +15,7 @@ from core.world_service import world_service
 from domain.entities import EntityType, SkillType
 from core.dice_engine import dice_engine
 from core.social_checks import (
+    BEFRIEND_INTENT_THRESHOLD,
     is_on_social_cooldown,
 )
 from core.social_engine.engine import social_engine
@@ -107,7 +108,7 @@ async def handle_dialogue(
     try:
         intent, intent_conf = command_classifier.classify_social_intent(request.command)
         logger.info(f"Social intent detected: intent={intent}, confidence={intent_conf:.3f} for command='{request.command}'")
-        if intent == "befriend" and intent_conf >= 0.35 and npc:
+        if intent == "befriend" and intent_conf >= BEFRIEND_INTENT_THRESHOLD and npc:
             # Load player for skill bonuses and location checks
             player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
 
@@ -117,60 +118,60 @@ async def handle_dialogue(
                     return {
                         "success": False,
                         "action_type": "dialogue",
-                        "content": "Тут никого похожего нет. Попробуй найти нужного человека в подходящем месте.",
+                        "content": "There is no one like that here. You would have to find them first.",
                         "original_command": request.command,
                         "warnings": ["Different location: cannot befriend out of proximity"],
                     }
 
-            # Cooldown check
-            if is_on_social_cooldown(npc, request.player_id):
-                return {
-                    "success": False,
-                    "action_type": "dialogue",
-                    "content": f"Сейчас не лучшее время. Попробуй чуть позже.",
-                    "original_command": request.command,
-                    "warnings": ["Social cooldown active"],
-                }
+            # A cooldown bars another attempt at winning them over — it does
+            # not make the NPC mute. Skip the check and let the conversation
+            # happen as ordinary dialogue.
+            on_cooldown = is_on_social_cooldown(npc, request.player_id)
+            if on_cooldown:
+                logger.info(
+                    f"Social cooldown active for {npc.name}; continuing as plain dialogue"
+                )
 
             # Run social engine (thin wrapper around existing mechanics)
-            mechanics_info = await social_engine.run_social_check(
+            mechanics_info = None if on_cooldown else await social_engine.run_social_check(
                 intent="befriend",
                 player=player,
                 npc=npc,
                 message=request.command,
             )
 
-            # Sync relationship label based on thresholds using returned disposition
-            new_score = mechanics_info.get("new_disposition", 0)
-            if new_score >= 50:
-                npc.current_state.relationship_to_player[request.player_id] = "friendly"
-            elif new_score <= -50:
-                npc.current_state.relationship_to_player[request.player_id] = "hostile"
+            if mechanics_info:
+                # Sync relationship label based on thresholds using returned disposition
+                new_score = mechanics_info.get("new_disposition", 0)
+                if new_score >= 50:
+                    npc.current_state.relationship_to_player[request.player_id] = "friendly"
+                elif new_score <= -50:
+                    npc.current_state.relationship_to_player[request.player_id] = "hostile"
 
-            # Persist via world service
-            await world_service.update_entity(
-                entity=npc,
-                actor_id=request.player_id,
-                session_id=request.session_id,
-            )
-
-            # Log summary
-            try:
-                roll = mechanics_info.get("roll", {})
-                logger.info(
-                    f"🤝 Social check (Persuasion): DC {mechanics_info.get('dc')}, roll {roll.get('total')} "
-                    f"({'success' if roll.get('success') else 'fail'}), disposition delta {mechanics_info.get('disposition_delta')} -> {new_score}"
+                # Persist via world service
+                await world_service.update_entity(
+                    entity=npc,
+                    actor_id=request.player_id,
+                    session_id=request.session_id,
                 )
-            except Exception:
-                pass
 
-            # Prepare mechanics info for response
-            try:
-                relationship_label = npc.current_state.compute_relationship_for_player(request.player_id)
-            except Exception:
-                relationship_label = npc.current_state.relationship_to_player.get(request.player_id, "neutral")
+                # Log summary
+                try:
+                    roll = mechanics_info.get("roll", {})
+                    logger.info(
+                        f"🤝 Social check (Persuasion): DC {mechanics_info.get('dc')}, roll {roll.get('total')} "
+                        f"({'success' if roll.get('success') else 'fail'}), disposition delta {mechanics_info.get('disposition_delta')} -> {new_score}"
+                    )
+                except Exception:
+                    pass
 
-            mechanics_info["relationship"] = relationship_label
+                # Prepare mechanics info for response
+                try:
+                    relationship_label = npc.current_state.compute_relationship_for_player(request.player_id)
+                except Exception:
+                    relationship_label = npc.current_state.relationship_to_player.get(request.player_id, "neutral")
+
+                mechanics_info["relationship"] = relationship_label
     except Exception as e:
         logger.warning(f"Failed to process social intent: {e}")
 
