@@ -239,7 +239,7 @@ async def generate_rivers_for_continent(
             description="A winding river",
             location_kind="river",
             parent_id=continent_id,
-            center=path[0] if path else [0.5, 0.5],  # River start point
+            center=list(path[0]) if path else [0.5, 0.5],  # River start point
             metadata=metadata,
             actor_id=world_actor_id,
         )

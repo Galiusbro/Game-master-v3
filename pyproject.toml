@@ -32,6 +32,16 @@ sections = ["FUTURE", "STDLIB", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
 
 [tool.mypy]
 python_version = "3.12"
+
+# The app runs with src/ on the path, so its imports read "from core…",
+# "from infrastructure…". Without these two lines mypy — invoked from the
+# repo root — names the same files src.core, src.infrastructure, fails to
+# resolve every intra-project import, and (under --ignore-missing-imports)
+# types them all as Any. That reports zero errors while checking nothing
+# across module boundaries.
+mypy_path = "src"
+explicit_package_bases = true
+
 check_untyped_defs = true
 disallow_any_generics = true
 disallow_incomplete_defs = true
@@ -51,7 +61,7 @@ warn_unused_ignores = true
 # Tests are exempt from strict typing: fixtures and mocks are
 # intentionally dynamic. Production code (src minus tests) is strict.
 [[tool.mypy.overrides]]
-module = "src.tests.*"
+module = "tests.*"
 ignore_errors = true
 
 [[tool.mypy.overrides]]
@@ -59,6 +69,7 @@ module = [
     "neo4j.*",
     "qdrant_client.*",
     "sentence_transformers.*",
+    "sklearn.*",
     "faker.*",
     "factory.*",
 ]

@@ -82,7 +82,7 @@ async def process_natural_command(
     
     try:
         # 0. CHECK IF PLAYER IS DEAD BEFORE PROCESSING ANY COMMAND
-        player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+        player = await world_service.get_player(request.player_id)
         if player and player.effective_hit_points <= 0:
             logger.info(f"💀 Player {player.name} is dead (HP: {player.effective_hit_points}). Checking for resurrection attempt.")
             
@@ -368,7 +368,7 @@ async def create_character(request: CharacterCreationRequest) -> GameCommandResp
 async def get_character_stats(player_id: UUID) -> Dict[str, Any]:
     """Get character statistics"""
     try:
-        player = await world_service.get_entity(player_id, EntityType.PLAYER)
+        player = await world_service.get_player(player_id)
         if not player:
             raise HTTPException(status_code=404, detail="Character not found")
         

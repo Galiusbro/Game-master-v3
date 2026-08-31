@@ -456,7 +456,7 @@ Generate:
             print(response.content)
             print("=" * 80)
 
-            return cast(str, response.content)
+            return response.content
             
         except Exception as e:
             print(f"❌ Failed to generate Master Lore: {e}")
@@ -596,7 +596,7 @@ CURRENT ERA: An age of uncertainty where heroes must rise to face growing darkne
     async def _enrich_continent(self, continent_id: UUID, context: EnrichmentContext) -> None:
         """Enrich a single continent"""
         try:
-            continent = await world_service.get_entity(continent_id, EntityType.LOCATION)
+            continent = await world_service.get_location(continent_id)
             if not continent:
                 return
             
@@ -644,7 +644,7 @@ CURRENT ERA: An age of uncertainty where heroes must rise to face growing darkne
     async def _enrich_country(self, country_id: UUID, context: EnrichmentContext) -> None:
         """Enrich a single country"""
         try:
-            country = await world_service.get_entity(country_id, EntityType.LOCATION)
+            country = await world_service.get_location(country_id)
             if not country:
                 return
 
@@ -697,7 +697,7 @@ CURRENT ERA: An age of uncertainty where heroes must rise to face growing darkne
     async def _enrich_region(self, region_id: UUID, context: EnrichmentContext) -> None:
         """Enrich a single region"""
         try:
-            region = await world_service.get_entity(region_id, EntityType.LOCATION)
+            region = await world_service.get_location(region_id)
             if not region:
                 return
             
@@ -747,7 +747,7 @@ CURRENT ERA: An age of uncertainty where heroes must rise to face growing darkne
     async def _enrich_settlement(self, settlement_id: UUID, context: EnrichmentContext) -> None:
         """Enrich a single settlement"""
         try:
-            settlement = await world_service.get_entity(settlement_id, EntityType.LOCATION)
+            settlement = await world_service.get_location(settlement_id)
             if not settlement:
                 return
             
@@ -805,7 +805,7 @@ CURRENT ERA: An age of uncertainty where heroes must rise to face growing darkne
     async def _enrich_npc(self, npc_id: UUID, context: EnrichmentContext) -> None:
         """Enrich a single NPC"""
         try:
-            npc = await world_service.get_entity(npc_id, EntityType.NPC)
+            npc = await world_service.get_npc(npc_id)
             if not npc:
                 return
             
@@ -854,7 +854,7 @@ CURRENT ERA: An age of uncertainty where heroes must rise to face growing darkne
     async def _enrich_poi(self, poi_id: UUID, context: EnrichmentContext) -> None:
         """Enrich a single POI"""
         try:
-            poi = await world_service.get_entity(poi_id, EntityType.LOCATION)
+            poi = await world_service.get_location(poi_id)
             if not poi:
                 return
             
@@ -907,7 +907,7 @@ CURRENT ERA: An age of uncertainty where heroes must rise to face growing darkne
     async def _enrich_building(self, building_id: UUID, context: EnrichmentContext) -> None:
         """Enrich a single building"""
         try:
-            building = await world_service.get_entity(building_id, EntityType.LOCATION)
+            building = await world_service.get_location(building_id)
             if not building:
                 return
             

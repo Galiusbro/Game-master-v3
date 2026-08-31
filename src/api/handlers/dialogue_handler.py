@@ -41,7 +41,7 @@ async def handle_dialogue(
             # Prefer NPCs in player's current location when resolving by description
             location_filter = None
             try:
-                player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+                player = await world_service.get_player(request.player_id)
                 if player and getattr(player, 'current_location_id', None):
                     location_filter = {"current_location_id": str(player.current_location_id)}
             except Exception:
@@ -72,7 +72,7 @@ async def handle_dialogue(
     # CHECK IF NPC IS ALIVE BEFORE DIALOGUE!
     logger.info(f"🔍 Checking NPC status for dialogue: {parsed.target_npc_id}")
     try:
-        npc = await world_service.get_entity(parsed.target_npc_id, EntityType.NPC)
+        npc = await world_service.get_npc(parsed.target_npc_id)
         
         if npc:
             logger.info(f"✅ NPC found: {npc.name}, is_alive: {getattr(npc, 'is_alive', 'MISSING')}")
@@ -108,12 +108,11 @@ async def handle_dialogue(
     try:
         intent, intent_conf = command_classifier.classify_social_intent(request.command)
         logger.info(f"Social intent detected: intent={intent}, confidence={intent_conf:.3f} for command='{request.command}'")
-        if intent == "befriend" and intent_conf >= BEFRIEND_INTENT_THRESHOLD and npc:
-            # Load player for skill bonuses and location checks
-            player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+        player = await world_service.get_player(request.player_id)
+        if intent == "befriend" and intent_conf >= BEFRIEND_INTENT_THRESHOLD and npc and player:
 
             # Hard blockers: same location and NPC is alive checked above
-            if player and getattr(player, 'current_location_id', None) and getattr(npc.current_state, 'current_location_id', None):
+            if player.current_location_id and npc.current_state.current_location_id:
                 if player.current_location_id != npc.current_state.current_location_id:
                     return {
                         "success": False,

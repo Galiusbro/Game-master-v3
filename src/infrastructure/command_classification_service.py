@@ -12,17 +12,27 @@ import re
 # Import entity types
 from domain.entities import EntityType
 
-# Optional imports for embedding functionality
+# Optional imports for embedding functionality. Declared Any up front so the
+# same names can hold either the real module, class and function or None —
+# without the annotation a name cannot be both a type and None. The service
+# degrades to keyword matching when they are absent, which is also how the
+# test suite and CI run without torch.
+np: Any = None
+SentenceTransformer: Any = None
+cosine_similarity: Any = None
+EMBEDDINGS_AVAILABLE = False
+
 try:
-    import numpy as np
-    from sentence_transformers import SentenceTransformer
-    from sklearn.metrics.pairwise import cosine_similarity
+    import numpy
+    from sentence_transformers import SentenceTransformer as _SentenceTransformer
+    from sklearn.metrics.pairwise import cosine_similarity as _cosine_similarity
+
+    np = numpy
+    SentenceTransformer = _SentenceTransformer
+    cosine_similarity = _cosine_similarity
     EMBEDDINGS_AVAILABLE = True
 except ImportError:
-    np = None  # type: ignore[assignment]  # optional dependency fallback
-    SentenceTransformer = None
-    cosine_similarity = None
-    EMBEDDINGS_AVAILABLE = False
+    pass
 
 from domain.entities import SkillType, AbilityScore
 from config.settings import settings

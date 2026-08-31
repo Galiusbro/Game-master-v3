@@ -31,9 +31,7 @@ async def _resolve_destination(
     across the square") falls back to semantic search over locations.
     """
     if parsed.target_location_id:
-        location = await world_service.get_entity(
-            parsed.target_location_id, EntityType.LOCATION
-        )
+        location = await world_service.get_location(parsed.target_location_id)
         if location:
             return location
 
@@ -59,7 +57,7 @@ async def handle_movement(
 
     warnings: list[str] = []
 
-    player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+    player = await world_service.get_player(request.player_id)
     if not isinstance(player, Player):
         return {
             "success": False,
@@ -90,7 +88,7 @@ async def handle_movement(
         # recorded exits should not trap the player, so an unconnected move
         # is reported rather than refused.
         found_origin = (
-            await world_service.get_entity(origin_id, EntityType.LOCATION)
+            await world_service.get_location(origin_id)
             if origin_id
             else None
         )

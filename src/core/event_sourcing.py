@@ -17,13 +17,11 @@ class UUIDEncoder(json.JSONEncoder):
             return obj.isoformat()
         return super().default(obj)
 
-import asyncpg
-from sqlalchemy import Column, DateTime, Float, String, Text, create_engine
+from sqlalchemy import DateTime, Float, String
 from sqlalchemy.dialects.postgresql import UUID as PGUUID, JSONB
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.future import select
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from config.settings import settings
 from domain.entities import (
@@ -33,37 +31,63 @@ from domain.entities import (
 
 logger = logging.getLogger(__name__)
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """Declarative base for the event store tables."""
 
 
-class EventLogModel(Base):  # type: ignore[valid-type, misc]  # declarative_base() is untyped (SQLAlchemy stub gap)
+class EventLogModel(Base):
     """SQLAlchemy model for event log table"""
     __tablename__ = "event_log"
-    
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
-    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
-    event_id = Column(PGUUID(as_uuid=True), nullable=False, index=True)
-    entity_type = Column(String(50), nullable=False, index=True)
-    entity_id = Column(PGUUID(as_uuid=True), nullable=False, index=True)
-    action_type = Column(String(50), nullable=False, index=True)
-    actor_type = Column(String(50), nullable=False)
-    actor_id = Column(PGUUID(as_uuid=True), nullable=False, index=True)
-    before_state = Column(JSONB, nullable=False, default=dict)
-    after_state = Column(JSONB, nullable=False, default=dict)
-    session_id = Column(PGUUID(as_uuid=True), nullable=True, index=True)
-    confidence_score = Column(Float, nullable=False, default=1.0)
-    rollback_data = Column(JSONB, nullable=True)
+
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, index=True
+    )
+    event_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), nullable=False, index=True
+    )
+    entity_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    entity_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), nullable=False, index=True
+    )
+    action_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    actor_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    actor_id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), nullable=False, index=True
+    )
+    before_state: Mapped[Dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    after_state: Mapped[Dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    session_id: Mapped[Optional[UUID]] = mapped_column(
+        PGUUID(as_uuid=True), nullable=True, index=True
+    )
+    confidence_score: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    rollback_data: Mapped[Optional[Dict[str, Any]]] = mapped_column(
+        JSONB, nullable=True
+    )
 
 
-class WorldSnapshotModel(Base):  # type: ignore[valid-type, misc]  # declarative_base() is untyped (SQLAlchemy stub gap)
+class WorldSnapshotModel(Base):
     """SQLAlchemy model for world snapshots"""
     __tablename__ = "world_snapshots"
-    
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
-    timestamp = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
-    snapshot_data = Column(JSONB, nullable=False)
-    snapshot_metadata = Column(JSONB, nullable=False, default=dict)
-    created_by = Column(String(50), nullable=False)  # 'system', 'manual', 'scheduled'
+
+    id: Mapped[UUID] = mapped_column(
+        PGUUID(as_uuid=True), primary_key=True, default=uuid4
+    )
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.utcnow, index=True
+    )
+    snapshot_data: Mapped[Dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    snapshot_metadata: Mapped[Dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict
+    )
+    # 'system', 'manual', 'scheduled'
+    created_by: Mapped[str] = mapped_column(String(50), nullable=False)
 
 
 class EventStore:
@@ -339,9 +363,7 @@ class EventStore:
         async with self.async_session() as session:
             session.add(snapshot)
             await session.commit()
-            # Legacy Column attributes are typed as Column[...] on instances,
-            # but at runtime this is the generated UUID value.
-            snapshot_id = cast(UUID, snapshot.id)
+            snapshot_id = snapshot.id
 
         logger.info(f"Created world snapshot: {snapshot_id}")
         return snapshot_id

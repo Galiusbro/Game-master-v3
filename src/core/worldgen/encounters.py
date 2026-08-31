@@ -51,8 +51,8 @@ async def attach_region_encounters(
     for _, regions in regions_by_continent.items():
         for reg in regions:
             try:
-                entity = await world_service.get_entity(UUID(str(reg["id"])))
-                if not entity or entity.type != EntityType.LOCATION:
+                entity = await world_service.get_location(UUID(str(reg["id"])))
+                if not entity:
                     continue
                 biome = reg.get("biome", "plains")
                 entries = _region_encounters_for_biome(biome)

@@ -199,12 +199,12 @@ class SemanticParser:
             
             # Get player entity - use dynamic import to avoid circular dependency
             from core.world_service import world_service
-            player = await world_service.get_entity(player_id, EntityType.PLAYER)
+            player = await world_service.get_player(player_id)
             if not player:
                 logger.warning(f"Player {player_id} not found")
                 return []
             
-            context_entities = [player]
+            context_entities: List[BaseEntity] = [player]
             
             # Get player's location
             try:
@@ -213,7 +213,7 @@ class SemanticParser:
                 current_loc_id = None
 
             if current_loc_id:
-                location = await world_service.get_entity(current_loc_id, EntityType.LOCATION)
+                location = await world_service.get_location(current_loc_id)
                 if location:
                     context_entities.append(location)
                     
@@ -243,7 +243,7 @@ class SemanticParser:
     ) -> Dict[str, Any]:
         """Resolve entity references in command to actual IDs"""
         
-        entities = {'confidence': 0.0}
+        entities: Dict[str, Any] = {'confidence': 0.0}
         
         try:
             # Extract potential entity mentions
@@ -504,7 +504,7 @@ class SemanticParser:
     
     def _build_context_for_dc(self, entities: List[BaseEntity]) -> Dict[str, Any]:
         """Build context dictionary for DC determination"""
-        context = {}
+        context: Dict[str, Any] = {}
         
         # Analyze entities to determine difficulty modifiers
         for entity in entities:

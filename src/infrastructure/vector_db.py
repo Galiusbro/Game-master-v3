@@ -147,7 +147,9 @@ class VectorDatabase:
         """Convert entity to Qdrant payload"""
         from uuid import UUID
         
-        payload = {
+        # Annotated because the literal below is all strings, while the
+        # type-specific blocks add numbers, booleans, lists and None.
+        payload: Dict[str, Any] = {
             "entity_id": str(entity.id),
             "entity_type": entity.type.value,
             "name": entity.name,

@@ -416,7 +416,7 @@ class DiceEngine:
                 description=f"Stealth attempt: {action_description}"
             )
             sequence.primary_roll = roll
-            sequence.success = roll.is_success
+            sequence.success = bool(roll.is_success)
             
         elif detected_action.value == 'persuasion' and action_conf > 0.5:
             # Persuasion check
@@ -428,7 +428,7 @@ class DiceEngine:
                 description=f"Persuasion attempt: {action_description}"
             )
             sequence.primary_roll = roll
-            sequence.success = roll.is_success
+            sequence.success = bool(roll.is_success)
             
         elif detected_action.value == 'deception' and action_conf > 0.5:
             # Deception check
@@ -440,7 +440,7 @@ class DiceEngine:
                 description=f"Deception attempt: {action_description}"
             )
             sequence.primary_roll = roll
-            sequence.success = roll.is_success
+            sequence.success = bool(roll.is_success)
             
         elif detected_action.value == 'sleight_of_hand' and action_conf > 0.5:
             # Sleight of Hand check
@@ -452,7 +452,7 @@ class DiceEngine:
                 description=f"Sleight of Hand attempt: {action_description}"
             )
             sequence.primary_roll = roll
-            sequence.success = roll.is_success
+            sequence.success = bool(roll.is_success)
             
         elif detected_action.value in ['search', 'investigation'] and action_conf > 0.5:
             # Investigation check
@@ -464,7 +464,7 @@ class DiceEngine:
                 description=f"Investigation attempt: {action_description}"
             )
             sequence.primary_roll = roll
-            sequence.success = roll.is_success
+            sequence.success = bool(roll.is_success)
             
         elif detected_action.value == 'combat' and action_conf > 0.5:
             # Attack roll - need target AC
@@ -475,7 +475,7 @@ class DiceEngine:
                 description=f"Attack: {action_description}"
             )
             sequence.primary_roll = attack_roll
-            sequence.success = attack_roll.is_success
+            sequence.success = bool(attack_roll.is_success)
             
             # If attack hits, roll damage
             if attack_roll.is_success:
@@ -508,7 +508,7 @@ class DiceEngine:
                 description=f"General check: {action_description}"
             )
             sequence.primary_roll = roll
-            sequence.success = roll.is_success
+            sequence.success = bool(roll.is_success)
         
         # Set critical results
         if sequence.primary_roll:

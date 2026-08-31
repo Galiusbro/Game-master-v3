@@ -4,7 +4,7 @@ Handles all graph operations and entity relationships
 """
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import Any, AsyncGenerator, Dict, List, Optional, Type, Union
 from uuid import UUID
 
 from neo4j import AsyncGraphDatabase, AsyncDriver, AsyncSession
@@ -389,7 +389,7 @@ class GraphDatabase:
         props = self._deserialize_complex_objects(props)
         
         # Map to appropriate entity class
-        entity_classes = {
+        entity_classes: Dict[EntityType, Type[BaseEntity]] = {
             EntityType.PLAYER: Player,
             EntityType.NPC: NPC, 
             EntityType.LOCATION: Location,

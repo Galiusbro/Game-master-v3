@@ -34,7 +34,7 @@ async def handle_magic(
         logger.info(f"✨ Resurrection spell detected! Confidence: {resurrection_conf:.2f}, NPC: {parsed.target_npc_id}")
         
         try:
-            npc = await world_service.get_entity(parsed.target_npc_id, EntityType.NPC)
+            npc = await world_service.get_npc(parsed.target_npc_id)
             
             if npc and hasattr(npc, 'is_alive') and not npc.is_alive:
                 logger.info(f"💀➡️😇 Resurrecting {npc.name}!")
@@ -57,7 +57,7 @@ async def handle_magic(
                     from domain.entities import Event, ActionType, ActorType
                     from uuid import uuid4
                     
-                    resurrection_event = Event(
+                    event = Event(
                         id=uuid4(),
                         name=f"Magical Resurrection of {npc.name}",
                         description=f"Through ancient magic and a scroll of resurrection, {npc.name} was brought back from death to life in the tavern. His soul was restored to his body by powerful magic.",
@@ -74,12 +74,12 @@ async def handle_magic(
                     
                     # Store event in Graph DB for AI memory
                     await world_service.create_entity(
-                        resurrection_event,
+                        event,
                         actor_id=request.player_id,
                         session_id=request.session_id
                     )
                     
-                    logger.info(f"📚 Created resurrection event entity: {resurrection_event.id}")
+                    logger.info(f"📚 Created resurrection event entity: {event.id}")
                     
                 except Exception as e:
                     logger.error(f"Failed to create resurrection event: {e}")

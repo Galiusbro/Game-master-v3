@@ -6,7 +6,7 @@ Defines common constants, thresholds, and configuration values
 used across world generation modules.
 """
 
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 # Default race weights for generic world NPC generation (approximate DnD distribution)
 RACE_WEIGHTS: Dict[str, float] = {
@@ -93,7 +93,7 @@ ROAD_TERRAINS = {
 }
 
 # Population estimates
-POPULATION_RANGES = {
+POPULATION_RANGES: Dict[str, Any] = {
     "capital": (20_000, 80_000),
     "town_base": 2_000,
     "town_variation": 8_000,
@@ -110,7 +110,7 @@ POPULATION_MULTIPLIERS = {
 }
 
 # Settlement generation ranges
-SETTLEMENT_RANGES = {
+SETTLEMENT_RANGES: Dict[str, Any] = {
     "max_continents": 3,
     "max_seas": 5,
     "regions_per_continent": (3, 7),
@@ -121,7 +121,7 @@ SETTLEMENT_RANGES = {
 }
 
 # Age ranges for different entity types
-AGE_RANGES = {
+AGE_RANGES: Dict[str, Any] = {
     "capital": (200, 800),
     "town": (50, 400),
     "village": (20, 200),

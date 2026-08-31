@@ -5,7 +5,7 @@ Provides intelligent caching for database queries and AI responses
 
 import json
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Tuple, Type, Union, cast
 from uuid import UUID
 import hashlib
 from datetime import datetime, timedelta
@@ -226,7 +226,7 @@ class CacheService:
             return None
         
         # Map entity types to classes
-        type_map = {
+        type_map: Dict[EntityType, Type[BaseEntity]] = {
             EntityType.PLAYER: Player,
             EntityType.NPC: NPC,
             EntityType.LOCATION: Location,
@@ -286,7 +286,7 @@ class CacheService:
         try:
             from domain.entities import Player, NPC, Location, Item, Quest
             
-            type_map = {
+            type_map: Dict[EntityType, Type[BaseEntity]] = {
                 EntityType.PLAYER: Player,
                 EntityType.NPC: NPC,
                 EntityType.LOCATION: Location,
@@ -340,7 +340,7 @@ class CacheService:
 
         from domain.entities import Player, NPC, Location, Item, Quest
 
-        type_map = {
+        type_map: Dict[EntityType, Type[BaseEntity]] = {
             EntityType.PLAYER: Player,
             EntityType.NPC: NPC,
             EntityType.LOCATION: Location,

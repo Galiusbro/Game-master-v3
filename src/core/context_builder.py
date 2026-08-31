@@ -141,7 +141,7 @@ class SmartContextBuilder:
         include_recent_events: bool = True
     ) -> List[Tuple[BaseEntity, int]]:
         """Gather entities with priority scores"""
-        entities_with_priority = []
+        entities_with_priority: List[Tuple[BaseEntity, int]] = []
         seen_entities: Set[UUID] = set()
         
         # 1. Always include player
@@ -154,9 +154,10 @@ class SmartContextBuilder:
             seen_entities.add(interaction_target.id)
         
         # 3. Get current location and its context
-        if getattr(player, 'current_location_id', None):
+        current_location_id = player.current_location_id
+        if current_location_id:
             try:
-                current_location = await world_service.get_entity(player.current_location_id, EntityType.LOCATION)
+                current_location = await world_service.get_location(current_location_id)
                 if current_location and current_location.id not in seen_entities:
                     priority = self.calculate_entity_priority(current_location, player, interaction_target)
                     entities_with_priority.append((current_location, priority))
@@ -165,7 +166,7 @@ class SmartContextBuilder:
                     # Get entities in current location via graph traversal
                     try:
                         location_context = await world_service.get_entity_context(
-                            player.current_location_id,
+                            current_location_id,
                             max_depth=1,  # Only immediate connections
                             entity_types=[EntityType.NPC, EntityType.ITEM]
                         )

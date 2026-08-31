@@ -24,7 +24,7 @@ async def handle_search(
 ) -> dict[str, Any]:
     """Handle search/investigation actions"""
     
-    search_request = f"I search for {parsed.intent_details.get('target', 'something')}. {request.command}"
+    search_request = f"I search for {(parsed.intent_details or {}).get('target', 'something')}. {request.command}"
     
     world_req = WorldDescriptionRequest(
         player_id=request.player_id,
@@ -43,7 +43,7 @@ async def handle_search(
         "tokens_used": ai_response.tokens_used,
         "response_time": ai_response.response_time,
         "resolved_entities": {
-            "search_target": parsed.intent_details.get('target', 'unknown')
+            "search_target": (parsed.intent_details or {}).get('target', 'unknown')
         },
         "parsing_confidence": parsed.confidence,
         "original_command": request.command

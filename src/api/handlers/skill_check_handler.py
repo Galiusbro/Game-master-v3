@@ -29,7 +29,7 @@ async def handle_skill_check(
     """Handle skill check actions with dice rolling"""
     try:
         # Get player entity
-        player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+        player = await world_service.get_player(request.player_id)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         
@@ -41,7 +41,7 @@ async def handle_skill_check(
         
         # Get target AC if it's a combat action
         if parsed.target_npc_id:
-            target_npc = await world_service.get_entity(parsed.target_npc_id, EntityType.NPC)
+            target_npc = await world_service.get_npc(parsed.target_npc_id)
             if target_npc:
                 context['target_ac'] = 15  # TODO: Calculate from NPC stats
         

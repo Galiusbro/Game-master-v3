@@ -5,14 +5,14 @@ Central orchestrator for all world operations and data consistency
 import asyncio
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type
 from uuid import UUID, uuid4
 
 from config.settings import settings
 from core.event_sourcing import event_store
 from domain.entities import (
-    ActionType, ActorType, BaseEntity, ChangeLogEntry, EntityType,
-    Event, WorldSnapshot
+    NPC, ActionType, ActorType, BaseEntity, ChangeLogEntry, EntityType,
+    Event, Location, Player, WorldSnapshot
 )
 from infrastructure.graph_db import graph_db
 from infrastructure.vector_db import vector_db
@@ -259,6 +259,26 @@ class WorldService:
         
         return entity
     
+    async def get_player(self, player_id: UUID) -> Optional[Player]:
+        """Get a player by id, or None if missing or not a player.
+
+        get_entity has to return the base type because it serves every
+        kind of entity; callers that know what they asked for should use
+        these instead of narrowing by hand.
+        """
+        entity = await self.get_entity(player_id, EntityType.PLAYER)
+        return entity if isinstance(entity, Player) else None
+
+    async def get_npc(self, npc_id: UUID) -> Optional[NPC]:
+        """Get an NPC by id, or None if missing or not an NPC."""
+        entity = await self.get_entity(npc_id, EntityType.NPC)
+        return entity if isinstance(entity, NPC) else None
+
+    async def get_location(self, location_id: UUID) -> Optional[Location]:
+        """Get a location by id, or None if missing or not a location."""
+        entity = await self.get_entity(location_id, EntityType.LOCATION)
+        return entity if isinstance(entity, Location) else None
+
     async def search_entities(
         self,
         query: str,
@@ -624,7 +644,7 @@ class WorldService:
 
         from domain.entities import NPC, Event, Item, Location, Player, Quest
 
-        entity_classes = {
+        entity_classes: Dict[EntityType, Type[BaseEntity]] = {
             EntityType.PLAYER: Player,
             EntityType.NPC: NPC,
             EntityType.LOCATION: Location,

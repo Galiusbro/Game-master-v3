@@ -227,7 +227,7 @@ class TestEnumValidation:
     def test_action_types(self):
         """Test ActionType enum"""
         types = [e.value for e in ActionType]
-        expected = ["move", "dialogue", "item_transfer", "combat", "world_change", "quest_update"]
+        expected = ["move", "dialogue", "item_transfer", "combat", "magic", "world_change", "quest_update"]
         assert set(types) == set(expected)
     
     @pytest.mark.unit

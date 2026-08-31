@@ -606,7 +606,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
 
         return hallucination_detected, warnings
     
-    @track_ai_operation("npc_dialogue", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
+    @track_ai_operation("npc_dialogue", settings.llm_model)
     async def generate_npc_dialogue(
         self,
         npc: NPC,
@@ -712,7 +712,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
                 warnings=[f"AI generation failed: {str(e)}"]
             )
     
-    @track_ai_operation("world_description", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
+    @track_ai_operation("world_description", settings.llm_model)
     async def generate_world_description(
         self,
         player: Player,
@@ -824,7 +824,7 @@ Make this moment feel epic, meaningful, and atmospheric while confirming their r
                 warnings=[f"Generation failed: {str(e)}"]
             )
     
-    @track_ai_operation("dice_outcome", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
+    @track_ai_operation("dice_outcome", settings.llm_model)
     async def generate_dice_outcome_narration(
         self,
         dice_results: str,
@@ -909,7 +909,7 @@ Armor Class: {player.stats.armor_class}
                 warnings=[f"Generation failed: {str(e)}"]
             )
     
-    @track_ai_operation("death_response", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
+    @track_ai_operation("death_response", settings.llm_model)
     async def generate_death_response(
         self,
         player_name: str,
@@ -966,7 +966,7 @@ Armor Class: {player.stats.armor_class}
                 warnings=[f"Generation failed: {str(e)}"]
             )
     
-    @track_ai_operation("resurrection_response", settings.llm_model)  # type: ignore[untyped-decorator]  # monitoring pkg not in this mypy run
+    @track_ai_operation("resurrection_response", settings.llm_model)
     async def generate_resurrection_response(
         self,
         player_name: str,
@@ -1034,7 +1034,11 @@ Armor Class: {player.stats.armor_class}
         """Stream NPC dialogue response in real-time"""
         template = self.templates["npc_dialogue"]
         
-        npc_profile = self.build_npc_profile_text(npc) if hasattr(npc, 'personality') else f"Name: {npc.name}\nDescription: {npc.description}"
+        npc_profile = (
+            self.build_npc_profile_text(npc)
+            if isinstance(npc, NPC)
+            else f"Name: {npc.name}\nDescription: {npc.description}"
+        )
         
         messages = [
             {"role": "system", "content": template.system_prompt},

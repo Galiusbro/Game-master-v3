@@ -69,11 +69,11 @@ async def npc_dialogue(
     """Generate NPC dialogue response to player message"""
     try:
         # Get player and NPC entities
-        player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+        player = await world_service.get_player(request.player_id)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         
-        npc = await world_service.get_entity(request.npc_id, EntityType.NPC)
+        npc = await world_service.get_npc(request.npc_id)
         if not npc:
             raise HTTPException(status_code=404, detail="NPC not found")
         
@@ -89,7 +89,7 @@ async def npc_dialogue(
             npc=npc,
             player_action=request.player_message,
             context_entities=context_entities,
-            situation=request.situation_context
+            situation=request.situation_context or ""
         )
         
         # Create event for this interaction
@@ -149,7 +149,7 @@ async def describe_world(
     """Generate world/location description based on player request"""
     try:
         # Get player entity
-        player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+        player = await world_service.get_player(request.player_id)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         
@@ -222,7 +222,7 @@ async def preview_context(
 ) -> Dict[str, Any]:
     """Preview what context would be built for a player (debugging/testing)"""
     try:
-        player = await world_service.get_entity(player_id, EntityType.PLAYER)
+        player = await world_service.get_player(player_id)
         if not player:
             raise HTTPException(status_code=404, detail="Player not found")
         

@@ -49,7 +49,7 @@ async def handle_combat(
     dice_rolls_data: list[dict[str, Any]] = []
 
     try:
-        player = await world_service.get_entity(request.player_id, EntityType.PLAYER)
+        player = await world_service.get_player(request.player_id)
         if not isinstance(player, Player):
             raise HTTPException(status_code=404, detail="Player not found")
 
@@ -58,9 +58,7 @@ async def handle_combat(
         # ---------------------------------------------------------------- #
         target_npc: Optional[NPC] = None
         if parsed.target_npc_id:
-            found = await world_service.get_entity(
-                parsed.target_npc_id, EntityType.NPC
-            )
+            found = await world_service.get_npc(parsed.target_npc_id)
             target_npc = found if isinstance(found, NPC) else None
 
         if target_npc is not None and not target_npc.is_alive:

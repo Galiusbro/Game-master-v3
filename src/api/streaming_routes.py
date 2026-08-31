@@ -150,7 +150,7 @@ async def stream_npc_dialogue(request: StreamNPCDialogueRequest) -> StreamingRes
                 try:
                     from uuid import UUID
                     npc_uuid = UUID(request.npc_id) if isinstance(request.npc_id, str) else request.npc_id
-                    npc = await world_service.get_entity(npc_uuid, EntityType.NPC)
+                    npc = await world_service.get_npc(npc_uuid)
                     if not npc:
                         yield format_sse_data("NPC not found", "error")
                         return

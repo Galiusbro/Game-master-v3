@@ -26,6 +26,7 @@ class ActionType(str, Enum):
     DIALOGUE = "dialogue"
     ITEM_TRANSFER = "item_transfer"
     COMBAT = "combat"
+    MAGIC = "magic"
     WORLD_CHANGE = "world_change"
     QUEST_UPDATE = "quest_update"
 

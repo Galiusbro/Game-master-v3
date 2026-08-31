@@ -257,8 +257,8 @@ async def generate_world(params: WorldGenParams | Dict[str, Any]) -> Dict[str, A
         race_counter: Counter[str] = Counter()
         for nid in summary["npcs"]:
             try:
-                npc = await world_service.get_entity(UUID(str(nid)), EntityType.NPC)
-                if npc and getattr(npc, "race", None) is not None:
+                npc = await world_service.get_npc(UUID(str(nid)))
+                if npc and npc.race is not None:
                     # npc.race may be an Enum; use its value if available
                     race_value = getattr(npc.race, "value", str(npc.race))
                     race_counter[race_value] += 1

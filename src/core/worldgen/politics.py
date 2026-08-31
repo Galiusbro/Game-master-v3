@@ -140,7 +140,7 @@ async def generate_countries_and_laws(
                 if cap:
                     capital_city_id = cap["id"]
 
-            country_info = {
+            country_info: Dict[str, Any] = {
                 "id": created_country.id,
                 "center": (avg_u, avg_v),
                 "region_ids": [r["id"] for r in assigned_regions],

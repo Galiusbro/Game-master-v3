@@ -21,12 +21,17 @@ jobs:
       - name: Install test dependencies
         run: |
           pip install fastapi pydantic-settings sqlalchemy asyncpg neo4j \
-            qdrant-client redis openai tiktoken httpx \
+            qdrant-client redis openai tiktoken httpx uvicorn python-dotenv \
             prometheus-fastapi-instrumentator numpy \
             pytest pytest-asyncio pytest-cov faker factory_boy mypy
 
+      # No --ignore-missing-imports: it used to hide the fact that mypy
+      # could not resolve a single intra-project import (the app roots them
+      # at src/, mypy named them src.*), typed them all as Any and checked
+      # nothing across module boundaries. pyproject sets mypy_path and
+      # names the few third-party packages that genuinely lack stubs.
       - name: Type check (strict)
-        run: mypy src config --ignore-missing-imports
+        run: mypy src config
 
       - name: Tests
         run: pytest src/tests -q
